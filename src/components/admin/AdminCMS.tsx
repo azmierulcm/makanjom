@@ -13,7 +13,9 @@ import {
   Type,
   ImageIcon,
   Calendar,
-  ChevronLeft
+  ChevronLeft,
+  LogOut,
+  ShieldAlert
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -29,25 +31,30 @@ export default function AdminCMS() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [formData, setFormData] = useState({ title: '', content: '', type: 'news' });
 
-  const fetchArticles = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('articles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setArticles(data as Article[]);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchArticles();
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        setRole(profile?.role || null);
+        fetchArticles();
+      }
+      setAuthLoading(false);
+    };
+    checkAuth();
   }, []);
 
+  const fetchArticles = async () => {
+...
   const handleSave = async () => {
-    const { error } = await supabase.from('articles').insert([formData]);
+    const { error } = await supabase.from('articles').insert([{ ...formData, author_id: user?.id }]);
     if (!error) {
       setIsEditing(false);
       fetchArticles();
@@ -55,14 +62,42 @@ export default function AdminCMS() {
     }
   };
 
-  if (loading) return <div className="p-20 text-center animate-pulse">Loading CMS...</div>;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
+
+  if (!user) {
+      if (typeof window !== 'undefined') window.location.href = '/login?redirect=/admin';
+      return null;
+  }
+
+  if (role !== 'admin') return (
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center px-6 text-center">
+          <div className="max-w-md">
+              <div className="w-20 h-20 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mx-auto mb-6">
+                  <ShieldAlert size={32} className="text-[#ff385c]" />
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-4">Access Denied</h2>
+              <p className="text-neutral-500 mb-8">This area is reserved for Makanjom Administrators. Please sign in with an authorized account.</p>
+              <button onClick={handleSignOut} className="px-8 py-3 bg-neutral-950 text-white rounded-full font-bold text-sm">Sign Out</button>
+          </div>
+      </div>
+  );
+
+  if (loading) return <div className="p-20 text-center animate-pulse font-black text-neutral-200 uppercase tracking-widest text-xs">Loading CMS Data...</div>;
 
   return (
     <div className="max-w-5xl mx-auto px-6 pb-24">
       {/* Admin Header */}
       <header className="py-12 flex justify-between items-end">
         <div>
-          <p className="text-xs font-black text-[#FF385C] uppercase tracking-[0.3em] mb-2">Aggregator Control</p>
+          <div className="flex items-center gap-4 mb-2">
+            <p className="text-xs font-black text-[#FF385C] uppercase tracking-[0.3em]">Aggregator Control</p>
+            <button onClick={handleSignOut} className="text-[10px] font-black text-neutral-300 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1.5"><LogOut size={12}/> Sign Out</button>
+          </div>
           <h1 className="text-4xl font-black tracking-tight text-neutral-900">Makanjom CMS</h1>
         </div>
         <button 

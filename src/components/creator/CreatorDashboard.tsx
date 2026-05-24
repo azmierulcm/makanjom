@@ -1,38 +1,111 @@
 'use client';
 
-import { useState } from 'react';
-import { Save, User, MapPin, Utensils, Award } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, User, MapPin, Utensils, Award, LogOut, ShieldAlert } from 'lucide-react';
 import { MOCK_CREATORS } from '@/lib/mock-data';
 import { CreatorProfileView } from './CreatorPublicProfile';
+import { supabase } from '@/lib/supabase';
+import type { CreatorProfile } from '@/lib/types';
 
 export default function CreatorDashboard() {
-  const [bio, setBio] = useState(MOCK_CREATORS[0].bio ?? '');
-  const [areas, setAreas] = useState(MOCK_CREATORS[0].expertise_areas.join(', '));
-  const [cuisines, setCuisines] = useState(MOCK_CREATORS[0].expertise_cuisines.join(', '));
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [bio, setBio] = useState('');
+  const [areas, setAreas] = useState('');
+  const [cuisines, setCuisines] = useState('');
   const [saved, setSaved] = useState(false);
+  const [realCreator, setRealCreator] = useState<CreatorProfile | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        setRole(profile?.role || null);
+
+        const { data: creatorData } = await supabase.from('creator_profiles').select('*, profiles(*)').eq('profile_id', user.id).single();
+        if (creatorData) {
+            setRealCreator(creatorData as CreatorProfile);
+            setBio(creatorData.bio ?? '');
+            setAreas(creatorData.expertise_areas?.join(', ') ?? '');
+            setCuisines(creatorData.expertise_cuisines?.join(', ') ?? '');
+        } else {
+            setBio(MOCK_CREATORS[0].bio ?? '');
+            setAreas(MOCK_CREATORS[0].expertise_areas.join(', '));
+            setCuisines(MOCK_CREATORS[0].expertise_cuisines.join(', '));
+        }
+      }
+      setAuthLoading(false);
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
   const creator = {
     ...MOCK_CREATORS[0],
+    id: realCreator?.id || MOCK_CREATORS[0].id,
     bio,
     expertise_areas: areas.split(',').map((s) => s.trim()).filter(Boolean),
     expertise_cuisines: cuisines.split(',').map((s) => s.trim()).filter(Boolean),
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!user) return;
     setSaved(true);
+
+    await supabase.from('creator_profiles').upsert({
+        profile_id: user.id,
+        bio,
+        expertise_areas: creator.expertise_areas,
+        expertise_cuisines: creator.expertise_cuisines
+    });
+
     setTimeout(() => setSaved(false), 2000);
   };
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
+
+  if (!user) {
+      if (typeof window !== 'undefined') window.location.href = '/login?redirect=/creator';
+      return null;
+  }
+
+  if (role !== 'creator' && role !== 'admin') return (
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center px-6 text-center">
+          <div className="max-w-md">
+              <div className="w-20 h-20 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mx-auto mb-6">
+                  <ShieldAlert size={32} className="text-[#ff385c]" />
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-4">Creator Status Required</h2>
+              <p className="text-neutral-500 mb-8">This dashboard is for registered Makanjom Creators. Please update your profile role to access these tools.</p>
+              <button onClick={handleSignOut} className="px-8 py-3 bg-neutral-950 text-white rounded-full font-bold text-sm">Sign Out</button>
+          </div>
+      </div>
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <header className="mb-10">
-        <div className="mb-2 flex items-center gap-2">
-          <Award className="h-5 w-5 text-[#ff385c]" />
-          <span className="text-xs font-black uppercase tracking-widest text-[#ff385c]">Creator Hub</span>
+        <div className="mb-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Award className="h-5 w-5 text-[#ff385c]" />
+            <span className="text-xs font-black uppercase tracking-widest text-[#ff385c]">Creator Hub</span>
+          </div>
+          <button onClick={handleSignOut} className="text-[10px] font-black text-neutral-300 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1.5"><LogOut size={12}/> Sign Out</button>
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-neutral-950">Your dashboard</h1>
         <p className="mt-2 text-neutral-600">Curate your profile, showcase your expertise, and drive the platform&apos;s content.</p>
       </header>
+...
 
       <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
         <section className="space-y-6 rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">

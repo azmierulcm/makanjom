@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Sparkles, User, LogOut, LogIn, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -45,10 +44,11 @@ export default function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Spin</Link>
-          <Link href="/explore" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Explore</Link>
-          <Link href="/creators" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
-          <Link href="/articles" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Feed</Link>
+          <Link href="/" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Spin</Link>
+          <Link href="/explore" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Explore</Link>
+          <Link href="/creators" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
+          <Link href="/articles" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Feed</Link>
+          <Link href="/games" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Games</Link>
           
           <div className="mx-1 h-6 w-px bg-neutral-100" />
 
@@ -59,13 +59,10 @@ export default function Header() {
               <Link href="/profile" className="touch-target rounded-full border-2 border-white bg-neutral-100 text-neutral-400 shadow-sm transition-all hover:border-[#ff385c]">
                 <User size={18} />
               </Link>
-              <button onClick={handleSignOut} className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 hover:text-red-500 transition-colors">Sign Out</button>
+              <button onClick={handleSignOut} className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 hover:text-red-500 transition-colors">Sign Out</button>
             </div>
           ) : (
-            <Link 
-              href="/login" 
-              className="flex items-center gap-2 rounded-full bg-neutral-950 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-neutral-800"
-            >
+            <Link href="/login" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950 flex items-center gap-2">
               <LogIn size={14} /> Sign In
             </Link>
           )}
@@ -83,9 +80,10 @@ export default function Header() {
           ) : (
             <Link
               href="/login"
-              className="flex h-10 items-center justify-center rounded-2xl bg-[#ff385c] px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-[#ff385c]/20"
+              className="touch-target rounded-2xl bg-neutral-50 text-neutral-500"
+              aria-label="Sign In"
             >
-              Sign In
+              <User size={20} />
             </Link>
           )}
         </div>
