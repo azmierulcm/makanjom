@@ -186,18 +186,30 @@ export default function RestaurantDetail({ id }: { id: string }) {
 
       {/* Facilities */}
       {restaurant.facilities && restaurant.facilities.length > 0 && (
-        <section className="mt-8 border-b border-neutral-100 pb-10">
-          <h2 className="mb-6 text-xl font-bold text-neutral-950">What this place offers</h2>
-          <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-12">
+        <section className="mt-8 border-b border-neutral-100 pb-12">
+          <header className="mb-6 sm:mb-8">
+            <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-4xl text-neutral-900">
+              What this restaurant offers
+            </h2>
+          </header>
+
+          <div className="grid grid-cols-1 gap-x-10 divide-y divide-neutral-100 sm:grid-cols-2 sm:divide-y-0">
             {restaurant.facilities.map((facility) => {
               const Icon = (Icons[facility.icon as keyof typeof Icons] as Icons.LucideIcon) || Icons.HelpCircle;
+
               return (
-                <div key={facility.id} className="flex items-center gap-4">
-                  <div className="text-neutral-900">
-                    <Icon size={24} strokeWidth={1.5} />
+                <article
+                  key={facility.id}
+                  className="group flex min-h-[72px] items-center gap-5 py-4 sm:min-h-[88px] sm:py-5"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-50 text-neutral-900 ring-1 ring-neutral-100 transition duration-200 group-hover:bg-neutral-900 group-hover:text-white">
+                    <Icon strokeWidth={1.8} className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
-                  <span className="text-base text-neutral-700">{facility.name}</span>
-                </div>
+
+                  <p className="text-[17px] font-normal leading-snug tracking-[-0.01em] text-neutral-800 sm:text-[20px]">
+                    {facility.name}
+                  </p>
+                </article>
               );
             })}
           </div>
