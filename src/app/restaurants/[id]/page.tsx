@@ -1,6 +1,8 @@
 import AppShell from '@/components/layout/AppShell';
 import RestaurantDetail from '@/components/RestaurantDetail';
 
+export const dynamic = 'force-dynamic';
+
 export default async function RestaurantPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (

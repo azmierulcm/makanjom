@@ -13,6 +13,8 @@ interface Order {
   created_at: string;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default function OrderQueue() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
