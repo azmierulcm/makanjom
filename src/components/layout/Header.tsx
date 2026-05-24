@@ -1,9 +1,37 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, User } from 'lucide-react';
+import { Sparkles, User, LogOut, LogIn, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Header() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
+    };
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-white/80 backdrop-blur-xl pt-safe">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:h-16 md:px-6">
@@ -17,24 +45,50 @@ export default function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <Link href="/" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Spin</Link>
-          <Link href="/explore" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Explore</Link>
-          <Link href="/creators" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
-          <Link href="/articles" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Feed</Link>
-          <Link href="/games" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Games</Link>
+          <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Spin</Link>
+          <Link href="/explore" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Explore</Link>
+          <Link href="/creators" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
+          <Link href="/articles" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Feed</Link>
+          
           <div className="mx-1 h-6 w-px bg-neutral-100" />
-          <Link href="/profile" className="touch-target rounded-full border-2 border-white bg-neutral-100 text-neutral-400 shadow-sm transition-all hover:border-[#ff385c]">
-            <User size={18} />
-          </Link>
+
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-neutral-300" />
+          ) : user ? (
+            <div className="flex items-center gap-6">
+              <Link href="/profile" className="touch-target rounded-full border-2 border-white bg-neutral-100 text-neutral-400 shadow-sm transition-all hover:border-[#ff385c]">
+                <User size={18} />
+              </Link>
+              <button onClick={handleSignOut} className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 hover:text-red-500 transition-colors">Sign Out</button>
+            </div>
+          ) : (
+            <Link 
+              href="/login" 
+              className="flex items-center gap-2 rounded-full bg-neutral-950 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-neutral-800"
+            >
+              <LogIn size={14} /> Sign In
+            </Link>
+          )}
         </nav>
 
-        <Link
-          href="/profile"
-          className="touch-target rounded-2xl bg-neutral-50 text-neutral-500 md:hidden"
-          aria-label="Profile"
-        >
-          <User size={20} />
-        </Link>
+        <div className="flex items-center gap-3 md:hidden">
+          {user ? (
+            <Link
+              href="/profile"
+              className="touch-target rounded-2xl bg-neutral-50 text-neutral-500"
+              aria-label="Profile"
+            >
+              <User size={20} />
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="flex h-10 items-center justify-center rounded-2xl bg-[#ff385c] px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-[#ff385c]/20"
+            >
+              Sign In
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
