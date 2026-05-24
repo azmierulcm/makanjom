@@ -293,12 +293,12 @@ function ListingManager({ restaurantId }: { restaurantId: string }) {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     <div className="aspect-square bg-neutral-100 rounded-2xl md:rounded-3xl flex flex-col items-center justify-center border-2 border-dashed border-neutral-200 text-neutral-400 group cursor-pointer hover:border-[#ff385c] hover:bg-[#ff385c]/5 transition-all">
-                        <Camera size={24} md:size={32} strokeWidth={1} className="group-hover:text-[#ff385c]" />
-                        <span className="text-[8px] md:text-[10px] font-bold mt-2 uppercase tracking-widest">Main Hero</span>
+                        <Camera size={24} strokeWidth={1} className="md:w-8 md:h-8 group-hover:text-[#ff385c]" />
+                        <span className="text-[8px] md:text-[10px] font-bold mt-2 uppercase tracking-widest text-center">Main Hero</span>
                     </div>
                     {[1, 2, 3].map(i => (
                         <div key={i} className="aspect-square bg-neutral-50 rounded-2xl md:rounded-3xl flex items-center justify-center text-neutral-300 border border-neutral-100">
-                             <LayoutGrid size={20} md:size={24} />
+                             <LayoutGrid size={20} className="md:w-6 md:h-6" />
                         </div>
                     ))}
                 </div>
@@ -378,7 +378,7 @@ function ListingManager({ restaurantId }: { restaurantId: string }) {
                             <div key={f.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 rounded-2xl bg-neutral-50 border border-neutral-100 group gap-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white flex items-center justify-center text-neutral-900 shadow-sm shrink-0">
-                                        <Icon size={16} md:size={20} strokeWidth={1.5} />
+                                        <Icon size={16} strokeWidth={1.5} className="md:w-5 md:h-5" />
                                     </div>
                                     <span className="text-xs md:text-sm font-bold text-neutral-800 line-clamp-1">{f.name}</span>
                                 </div>
@@ -574,7 +574,7 @@ function VendorLogin() {
       >
         <div className="flex flex-col items-center text-center mb-8 md:mb-10">
           <div className="w-14 h-14 md:w-16 md:h-16 bg-[#ff385c] rounded-2xl md:rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-[#ff385c]/20 mb-5 md:mb-6">
-            <Store size={24} md:size={28} className="text-white" />
+            <Store size={24} className="text-white md:w-7 md:h-7" />
           </div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-neutral-950">Vendor Login</h2>
           <p className="text-neutral-500 text-xs md:text-sm mt-2 font-medium">Access your restaurant management suite.</p>
