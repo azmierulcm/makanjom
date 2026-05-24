@@ -1,0 +1,3 @@
+-- ⚠️  Moved to supabase/03_seed.sql
+-- Run supabase/01_reset.sql → 02_schema.sql → 03_seed.sql
+-- See supabase/README.md

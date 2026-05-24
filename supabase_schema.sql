@@ -1,0 +1,6 @@
+-- ⚠️  Moved to supabase/ folder. Run scripts in order:
+--     supabase/01_reset.sql
+--     supabase/02_schema.sql
+--     supabase/03_seed.sql
+--
+-- See supabase/README.md for full instructions.
