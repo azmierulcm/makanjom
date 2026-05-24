@@ -15,10 +15,6 @@ export default function ExplorePage() {
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('All');
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
@@ -39,6 +35,10 @@ export default function ExplorePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   const filtered = useMemo(() => {
     return restaurants.filter((r) => {

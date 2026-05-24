@@ -31,10 +31,6 @@ export default function AdminCMS() {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ title: '', content: '', type: 'news' });
 
-  useEffect(() => {
-    fetchArticles();
-  }, []);
-
   const fetchArticles = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -45,6 +41,10 @@ export default function AdminCMS() {
     if (data) setArticles(data as Article[]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
 
   const handleSave = async () => {
     const { error } = await supabase.from('articles').insert([formData]);

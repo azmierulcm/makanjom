@@ -10,10 +10,6 @@ export default function ArticlesFeed() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchArticles();
-  }, []);
-
   const fetchArticles = async () => {
     try {
       const { data, error } = await supabase
@@ -28,6 +24,10 @@ export default function ArticlesFeed() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">

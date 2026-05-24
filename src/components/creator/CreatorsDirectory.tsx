@@ -12,10 +12,6 @@ export default function CreatorsDirectory() {
   const [creators, setCreators] = useState<CreatorProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCreators();
-  }, []);
-
   const fetchCreators = async () => {
     try {
       const { data, error } = await supabase
@@ -31,6 +27,10 @@ export default function CreatorsDirectory() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCreators();
+  }, []);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

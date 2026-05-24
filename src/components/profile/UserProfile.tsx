@@ -31,6 +31,12 @@ export default function UserProfile() {
   const [badgeCount, setBadgeCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async () => {
+    const { data } = await supabase.from('profiles').select('*').limit(1).single();
+    if (data) setProfile(data as Profile);
+    setLoading(false);
+  };
+
   useEffect(() => {
     fetchProfile();
     const state = getGamificationState();
@@ -39,12 +45,6 @@ export default function UserProfile() {
     setSavedCount(state.savedRestaurants.length);
     setBadgeCount(state.badges.length);
   }, []);
-
-  const fetchProfile = async () => {
-    const { data } = await supabase.from('profiles').select('*').limit(1).single();
-    if (data) setProfile(data as Profile);
-    setLoading(false);
-  };
 
   const totalPoints = (profile?.gamification_points ?? 0) + localPoints;
   const level = getLevel(totalPoints);
