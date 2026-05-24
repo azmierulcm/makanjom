@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import type { Restaurant } from '@/lib/types';
 import { MOCK_RESTAURANTS } from '@/lib/mock-data';
 import { getCuisineLabel } from '@/components/RestaurantCard';
+import Link from 'next/link';
 
 interface RouletteRestaurant extends Restaurant {
   reason?: string;
