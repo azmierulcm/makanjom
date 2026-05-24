@@ -193,20 +193,20 @@ export default function RestaurantDetail({ id }: { id: string }) {
             </h2>
           </header>
 
-          <div className="grid grid-cols-1 gap-x-10 divide-y divide-neutral-100 sm:grid-cols-2 sm:divide-y-0">
+          <div className="grid grid-cols-2 gap-x-4 sm:gap-x-10">
             {restaurant.facilities.map((facility) => {
               const Icon = (Icons[facility.icon as keyof typeof Icons] as Icons.LucideIcon) || Icons.HelpCircle;
 
               return (
                 <article
                   key={facility.id}
-                  className="group flex min-h-[72px] items-center gap-5 py-4 sm:min-h-[88px] sm:py-5"
+                  className="group flex min-h-[64px] items-center gap-3 py-3 sm:min-h-[88px] sm:gap-5 sm:py-5"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-50 text-neutral-900 ring-1 ring-neutral-100 transition duration-200 group-hover:bg-neutral-900 group-hover:text-white">
-                    <Icon strokeWidth={1.8} className="h-6 w-6 sm:h-7 sm:w-7" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-50 text-neutral-900 ring-1 ring-neutral-100 transition duration-200 group-hover:bg-neutral-900 group-hover:text-white sm:h-11 sm:w-11 sm:rounded-2xl">
+                    <Icon strokeWidth={1.8} className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
 
-                  <p className="text-[17px] font-normal leading-snug tracking-[-0.01em] text-neutral-800 sm:text-[20px]">
+                  <p className="text-[15px] font-medium leading-snug tracking-[-0.01em] text-neutral-800 sm:text-[18px]">
                     {facility.name}
                   </p>
                 </article>
@@ -269,7 +269,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
               <p className="text-neutral-500">Menu coming soon.</p>
             ) : (
               Object.entries(menuByCategory).map(([category, items]) => {
-                const isExpanded = expandedCategories[category] !== false; // Default to expanded
+                const isExpanded = !!expandedCategories[category]; // Default to collapsed
                 return (
                   <div key={category} className="overflow-hidden rounded-[2rem] border border-neutral-100 bg-white shadow-sm">
                     <button
