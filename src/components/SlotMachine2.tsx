@@ -11,8 +11,22 @@ import { MOCK_RESTAURANTS } from '@/lib/mock-data';
 import { getCuisineLabel } from '@/components/RestaurantCard';
 import Link from 'next/link';
 import type { Restaurant } from '@/lib/types';
+import { Star, Clock3, MapPin } from 'lucide-react';
 
-const cravings = ["Something new", "Comfort food", "Quick bite", "Family-friendly", "Spicy", "Dessert"];
+interface SpinnerRestaurant extends Restaurant {
+  distance?: string;
+  accent?: string;
+}
+
+const cravings = ["Comfort", "Something new", "Family-friendly", "Quick bite", "Cozy dinner", "Treat meal"];
+const accents = [
+  "from-rose-50 to-orange-50",
+  "from-emerald-50 to-lime-50",
+  "from-sky-50 to-slate-50",
+  "from-amber-50 to-red-50",
+  "from-yellow-50 to-orange-50",
+  "from-green-50 to-teal-50"
+];
 
 function pickRandomIndex(length: number) {
   return Math.floor(Math.random() * length);
@@ -81,7 +95,7 @@ function Reel({
 }
 
 export default function SlotMachine2() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [restaurants, setRestaurants] = useState<SpinnerRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
   const [selected, setSelected] = useState({ craving: 0, cuisine: 0, restaurant: 0 });
@@ -100,13 +114,19 @@ export default function SlotMachine2() {
         .eq('is_active', true)
         .limit(20);
 
-      if (data?.length) {
-        setRestaurants(data as Restaurant[]);
-      } else {
-        setRestaurants(MOCK_RESTAURANTS);
-      }
+      const pool = data?.length ? data : MOCK_RESTAURANTS;
+      const mapped = pool.map((r, i) => ({
+        ...(r as SpinnerRestaurant),
+        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
+        accent: accents[i % accents.length],
+      }));
+      setRestaurants(mapped);
     } catch {
-      setRestaurants(MOCK_RESTAURANTS);
+      setRestaurants(MOCK_RESTAURANTS.map((r, i) => ({
+        ...r,
+        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
+        accent: accents[i % accents.length],
+      })));
     } finally {
       setLoading(false);
     }
@@ -216,26 +236,55 @@ export default function SlotMachine2() {
           <AnimatePresence mode="wait">
             {hasSpun && (
               <motion.div 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                key={winner.id}
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="rounded-[1.35rem] bg-rose-50 px-4 py-3 border border-rose-100"
+                exit={{ opacity: 0, scale: 0.98 }}
+                className={`relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-gradient-to-br ${winner.accent} p-5 shadow-sm`}
               >
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400">Tonight says</p>
-                <div className="mt-1 flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-xl font-black tracking-[-0.04em] text-neutral-950">{winner.name}</p>
-                    <p className="truncate text-xs font-medium text-neutral-500">
-                      {cravings[selected.craving]} · {getCuisineLabel(winner)}
-                    </p>
-                  </div>
-                  <Link 
-                    href={`/restaurants/${winner.id}`}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ff385c] text-white shadow-lg active:scale-90 transition-transform"
-                  >
-                    <Utensils className="h-4 w-4" />
-                  </Link>
+                <div className="absolute right-4 top-4 rounded-full bg-white/70 px-3 py-1 text-[10px] font-black uppercase text-neutral-700 shadow-sm ring-1 ring-neutral-200/70">
+                  Result
                 </div>
+
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm ring-1 ring-neutral-200">
+                  {winner.emoji}
+                </div>
+                
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-neutral-500 italic">Tonight&apos;s pick</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950">
+                  {winner.name}
+                </h2>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-neutral-700 line-clamp-2">
+                  {getCuisineLabel(winner)} with a {(winner.vibe || 'Cozy').toLowerCase()} vibe. {winner.description}
+                </p>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
+                      <Clock3 className="h-3 w-3" /> Dist
+                    </div>
+                    <p className="mt-1 text-xs font-black">{winner.distance}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
+                      <Star className="h-3 w-3" /> Rate
+                    </div>
+                    <p className="mt-1 text-xs font-black">{winner.rating}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
+                      <Utensils className="h-3 w-3" /> Price
+                    </div>
+                    <p className="mt-1 text-xs font-black">{winner.price_range}</p>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/restaurants/${winner.id}`}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-3.5 text-xs font-black uppercase tracking-widest text-white hover:bg-black transition-transform active:scale-95"
+                >
+                  View Details
+                </Link>
               </motion.div>
             )}
           </AnimatePresence>
