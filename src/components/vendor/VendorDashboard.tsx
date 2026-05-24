@@ -329,7 +329,7 @@ function ListingManager({ restaurantId }: { restaurantId: string }) {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {restaurant?.facilities.map((f) => {
+                    {restaurant?.facilities?.map((f) => {
                         const Icon = (Icons as any)[f.icon] || Utensils;
                         return (
                             <div key={f.id} className="flex items-center justify-between p-4 rounded-2xl bg-neutral-50 border border-neutral-100 group">
