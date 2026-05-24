@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -13,73 +13,18 @@ import {
   Utensils,
   Trophy,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { supabase } from '@/lib/supabase';
+import type { Restaurant } from '@/lib/types';
+import { MOCK_RESTAURANTS } from '@/lib/mock-data';
+import { getCuisineLabel } from '@/components/RestaurantCard';
 
-const restaurants = [
-  {
-    name: "Village Park Nasi Lemak",
-    cuisine: "Malay",
-    mood: "Legendary",
-    distance: "16 min",
-    rating: 4.6,
-    price: "RM",
-    emoji: "🍛",
-    reason: "Iconic, comforting, and always worth the queue.",
-  },
-  {
-    name: "Devi's Corner",
-    cuisine: "Indian",
-    mood: "Spicy",
-    distance: "5 min",
-    rating: 4.4,
-    price: "RM",
-    emoji: "🍌",
-    reason: "Fast, nearby, and perfect when everyone wants something bold.",
-  },
-  {
-    name: "Brew & Bites TTDI",
-    cuisine: "Cafe",
-    mood: "Chill",
-    distance: "10 min",
-    rating: 4.3,
-    price: "RM RM",
-    emoji: "☕",
-    reason: "Soft landing dinner with coffee, snacks, and zero drama.",
-  },
-  {
-    name: "Sushi Hikari",
-    cuisine: "Japanese",
-    mood: "Clean",
-    distance: "11 min",
-    rating: 4.5,
-    price: "RM RM",
-    emoji: "🍣",
-    reason: "Fresh, light, and feels like a tiny dinner upgrade.",
-  },
-  {
-    name: "Penang Road Cendol",
-    cuisine: "Dessert",
-    mood: "Sweet",
-    distance: "12 min",
-    rating: 4.2,
-    price: "RM",
-    emoji: "🍧",
-    reason: "For dessert-first people who somehow still call it dinner.",
-  },
-  {
-    name: "Warung Pak Din",
-    cuisine: "Mamak",
-    mood: "Easy",
-    distance: "13 min",
-    rating: 4.4,
-    price: "RM",
-    emoji: "🫓",
-    reason: "Casual, close enough, and special enough to feel chosen.",
-  },
-];
+interface RouletteRestaurant extends Restaurant {
+  reason?: string;
+}
 
 const cravings = ["Comfort", "Something new", "Family-friendly", "Fast", "Spicy", "Chill"];
-const cuisines = ["Mamak", "Malay", "Indian", "Cafe", "Japanese", "Dessert"];
 const vibes = ["Low effort", "Crowd pleaser", "Nearby", "Treat night", "No queue", "Cosy"];
 
 function classNames(...items: (string | boolean | undefined)[]) {
@@ -265,7 +210,9 @@ function MiniStat({ icon: Icon, label, value }: { icon: any, label: string, valu
 }
 
 export default function SlotMachine2() {
-  const [winner, setWinner] = useState(restaurants[5]);
+  const [restaurantPool, setRestaurantPool] = useState<RouletteRestaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [winner, setWinner] = useState<RouletteRestaurant | null>(null);
   const [craving, setCraving] = useState("Something new");
   const [cuisine, setCuisine] = useState("Mamak");
   const [vibe, setVibe] = useState("Nearby");
@@ -274,45 +221,92 @@ export default function SlotMachine2() {
   const [spinCount, setSpinCount] = useState(0);
   const { tick, win, softClick } = useSlotSounds();
 
-  const winnerIndex = useMemo(() => restaurants.findIndex((item) => item.name === winner.name), [winner]);
+  const fetchPool = async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('is_active', true)
+        .limit(20);
+
+      const pool = (data?.length ? data : MOCK_RESTAURANTS) as RouletteRestaurant[];
+      const mapped = pool.map(r => ({
+        ...r,
+        distance: r.distance || `${(Math.random() * 15 + 2).toFixed(0)} min`,
+        reason: r.description || "A top-tier pick for your dinner tonight.",
+      }));
+      setRestaurantPool(mapped);
+      setWinner(mapped[Math.floor(Math.random() * mapped.length)]);
+    } catch {
+      const mapped = MOCK_RESTAURANTS.map(r => ({
+        ...r,
+        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
+        reason: r.description || "Iconic and comforting.",
+      }));
+      setRestaurantPool(mapped);
+      setWinner(mapped[0]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPool();
+  }, []);
+
+  const cuisinesList = useMemo(() => restaurantPool.map(r => getCuisineLabel(r)), [restaurantPool]);
+  const winnerIndex = useMemo(() => restaurantPool.findIndex((item) => item.id === winner?.id), [winner, restaurantPool]);
 
   const spin = () => {
-    if (spinning) return;
+    if (spinning || restaurantPool.length === 0) return;
     setSpinning(true);
     setSpinCount((current) => current + 1);
 
     const totalTicks = 18;
     for (let i = 0; i < totalTicks; i++) {
       setTimeout(() => {
-        const poolIndex = Math.floor(Math.random() * restaurants.length);
-        const next = restaurants[poolIndex];
+        const poolIndex = Math.floor(Math.random() * restaurantPool.length);
+        const next = restaurantPool[poolIndex];
         setWinner(next);
         setCraving(cravings[Math.floor(Math.random() * cravings.length)]);
-        setCuisine(cuisines[Math.floor(Math.random() * cuisines.length)]);
+        setCuisine(getCuisineLabel(next));
         setVibe(vibes[Math.floor(Math.random() * vibes.length)]);
         if (soundOn) tick();
       }, i * 70 + i * i * 2.2);
     }
 
     setTimeout(() => {
-      const final = restaurants[Math.floor(Math.random() * restaurants.length)];
+      const final = restaurantPool[Math.floor(Math.random() * restaurantPool.length)];
       setWinner(final);
-      setCraving(final.mood === "Legendary" ? "Comfort" : final.mood === "Sweet" ? "Treat night" : "Something new");
-      setCuisine(final.cuisine);
-      setVibe(final.distance === "5 min" ? "Fast" : "Nearby");
+      setCraving(final.rating > 4.6 ? "Comfort" : "Something new");
+      setCuisine(getCuisineLabel(final));
+      setVibe(vibes[Math.floor(Math.random() * vibes.length)]);
       setSpinning(false);
       if (soundOn) win();
     }, 1850);
   };
 
   const nudge = () => {
-    const nextIndex = (winnerIndex + 1) % restaurants.length;
-    const next = restaurants[nextIndex];
+    if (restaurantPool.length === 0) return;
+    const nextIndex = (winnerIndex + 1) % restaurantPool.length;
+    const next = restaurantPool[nextIndex];
     setWinner(next);
-    setCuisine(next.cuisine);
-    setCraving(next.mood);
+    setCuisine(getCuisineLabel(next));
+    setCraving(cravings[pickRandomIndex(cravings.length)]);
     if (soundOn) softClick();
   };
+
+  function pickRandomIndex(length: number) {
+    return Math.floor(Math.random() * length);
+  }
+
+  if (loading && restaurantPool.length === 0) return (
+    <div className="flex flex-col items-center justify-center p-32 w-full gap-4 bg-[#f7f5f2] min-h-screen">
+      <Loader2 className="animate-spin text-[#FF385C]" size={40} />
+      <p className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest">Warming the reels...</p>
+    </div>
+  );
 
   return (
     <main className="min-h-screen bg-[#f7f5f2] px-4 py-5 font-[Inter,ui-sans-serif,system-ui] text-zinc-950 sm:px-6">
@@ -345,7 +339,7 @@ export default function SlotMachine2() {
               transition={{ repeat: spinning ? Infinity : 0, duration: 0.55 }}
               className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.4rem] bg-zinc-950 text-3xl shadow-lg"
             >
-              {winner.emoji}
+              {winner?.emoji || '🍽️'}
             </motion.div>
           </div>
         </header>
@@ -353,81 +347,87 @@ export default function SlotMachine2() {
         <section className="grid grid-cols-1 gap-2.5">
           <Reel label="Craving" items={cravings} value={craving} spinning={spinning} />
           <div className="grid grid-cols-2 gap-2.5">
-            <Reel label="Cuisine" items={cuisines} value={cuisine} spinning={spinning} delay={0.04} />
+            <Reel label="Cuisine" items={cuisinesList} value={cuisine} spinning={spinning} delay={0.04} />
             <Reel label="Vibe" items={vibes} value={vibe} spinning={spinning} delay={0.08} />
           </div>
         </section>
 
-        <motion.section
-          layout
-          className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-rose-50 p-4 shadow-sm"
-        >
-          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-200/35 blur-2xl" />
-          <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/45 blur-2xl" />
-
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-3xl shadow-sm ring-1 ring-zinc-100">
-                {winner.emoji}
-              </div>
-              <div>
-                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-emerald-700">
-                  <Trophy className="h-3.5 w-3.5" /> Tonight's pick
-                </p>
-                <h2 className="mt-1 text-2xl font-black leading-tight tracking-[-0.05em]">{winner.name}</h2>
-              </div>
-            </div>
-          </div>
-
-          <p className="relative mt-3 text-sm leading-6 text-zinc-600">{winner.reason}</p>
-
-          <div className="relative mt-4 grid grid-cols-3 gap-2">
-            <MiniStat icon={Clock3} label="Drive" value={winner.distance} />
-            <MiniStat icon={Star} label="Rating" value={winner.rating} />
-            <MiniStat icon={Utensils} label="Price" value={winner.price} />
-          </div>
-
-          <div className="relative mt-4 grid grid-cols-[1fr_auto] gap-2">
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={spin}
-              disabled={spinning}
-              className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-[#ff385c] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(255,56,92,0.28)] transition disabled:cursor-not-allowed disabled:opacity-70"
+        <AnimatePresence mode="wait">
+          {winner && (
+            <motion.section
+              key={winner.id}
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-rose-50 p-4 shadow-sm"
             >
-              <Shuffle className={classNames("h-4 w-4", spinning && "animate-spin")} />
-              {spinning ? "Choosing..." : "Choose for me"}
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={nudge}
-              disabled={spinning}
-              className="grid h-14 w-14 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm disabled:opacity-50"
-              aria-label="Nudge to next restaurant"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </motion.button>
-          </div>
-        </motion.section>
+              <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-200/35 blur-2xl" />
+              <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/45 blur-2xl" />
+
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-3xl shadow-sm ring-1 ring-zinc-100">
+                    {winner.emoji}
+                  </div>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-emerald-700">
+                      <Trophy className="h-3.5 w-3.5" /> Tonight's pick
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black leading-tight tracking-[-0.05em]">{winner.name}</h2>
+                  </div>
+                </div>
+              </div>
+
+              <p className="relative mt-3 text-sm leading-6 text-zinc-600 line-clamp-2">{winner.reason}</p>
+
+              <div className="relative mt-4 grid grid-cols-3 gap-2">
+                <MiniStat icon={Clock3} label="Drive" value={winner.distance || '10 min'} />
+                <MiniStat icon={Star} label="Rating" value={winner.rating} />
+                <MiniStat icon={Utensils} label="Price" value={winner.price_range} />
+              </div>
+
+              <div className="relative mt-4 grid grid-cols-[1fr_auto] gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={spin}
+                  disabled={spinning}
+                  className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-[#ff385c] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(255,56,92,0.28)] transition disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <Shuffle className={classNames("h-4 w-4", spinning && "animate-spin")} />
+                  {spinning ? "Choosing..." : "Choose for me"}
+                </motion.button>
+                <Link
+                  href={`/restaurants/${winner.id}`}
+                  className="grid h-14 w-14 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm transition active:scale-95"
+                  aria-label="View restaurant details"
+                >
+                  <Utensils className="h-4 w-4" />
+                </Link>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
 
         <section className="rounded-[2rem] border border-zinc-200 bg-white p-3 shadow-sm">
           <div className="mb-2 flex items-center justify-between px-1">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-zinc-400">Nearby options</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-zinc-400">Live options</p>
               <h3 className="mt-1 text-lg font-black tracking-[-0.03em]">Restaurant pool</h3>
             </div>
-            <div className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-500">{restaurants.length}</div>
+            <div className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-500">{restaurantPool.length}</div>
           </div>
 
           <div className="space-y-2">
-            {restaurants.map((item, index) => {
-              const active = item.name === winner.name;
+            {restaurantPool.map((item, index) => {
+              const active = item.id === winner?.id;
               return (
                 <button
-                  key={item.name}
+                  key={item.id}
                   onClick={() => {
                     setWinner(item);
-                    setCuisine(item.cuisine);
-                    setCraving(item.mood);
+                    setCuisine(getCuisineLabel(item));
+                    setCraving(item.rating > 4.6 ? "Comfort" : "Something new");
                     if (soundOn) softClick();
                   }}
                   className={classNames(
@@ -439,7 +439,7 @@ export default function SlotMachine2() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-black text-zinc-950">{item.name}</p>
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-500">
-                      <MapPin className="h-3 w-3" /> {item.cuisine}
+                      <MapPin className="h-3 w-3" /> {getCuisineLabel(item)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -452,8 +452,18 @@ export default function SlotMachine2() {
           </div>
         </section>
 
+        <div className="flex justify-center gap-4 py-2">
+            <button
+              onClick={nudge}
+              disabled={spinning}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-600 transition-colors"
+            >
+              <RotateCcw size={12} /> Nudge destiny
+            </button>
+        </div>
+
         <p className="pb-3 text-center text-xs text-zinc-400">
-          Spins today: <span className="font-black text-zinc-600">{spinCount}</span> · Tap any restaurant to force destiny politely.
+          Spins today: <span className="font-black text-zinc-600">{spinCount}</span> · Linked to your Supabase kitchen.
         </p>
       </div>
     </main>
