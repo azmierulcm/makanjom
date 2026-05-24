@@ -1,306 +1,461 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Shuffle, Sparkles, Utensils, Loader2 } from "lucide-react";
-import { supabase } from '@/lib/supabase';
-import { sounds } from '@/lib/sounds';
-import { haptics } from '@/lib/haptics';
-import { recordSpin } from '@/lib/gamification';
-import { MOCK_RESTAURANTS } from '@/lib/mock-data';
-import { getCuisineLabel } from '@/components/RestaurantCard';
-import Link from 'next/link';
-import type { Restaurant } from '@/lib/types';
-import { Star, Clock3, MapPin } from 'lucide-react';
+import {
+  MapPin,
+  Star,
+  Clock3,
+  Shuffle,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Utensils,
+  Trophy,
+  RotateCcw,
+} from "lucide-react";
 
-interface SpinnerRestaurant extends Restaurant {
-  distance?: string;
-  accent?: string;
-}
-
-const cravings = ["Comfort", "Something new", "Family-friendly", "Quick bite", "Cozy dinner", "Treat meal"];
-const accents = [
-  "from-rose-50 to-orange-50",
-  "from-emerald-50 to-lime-50",
-  "from-sky-50 to-slate-50",
-  "from-amber-50 to-red-50",
-  "from-yellow-50 to-orange-50",
-  "from-green-50 to-teal-50"
+const restaurants = [
+  {
+    name: "Village Park Nasi Lemak",
+    cuisine: "Malay",
+    mood: "Legendary",
+    distance: "16 min",
+    rating: 4.6,
+    price: "RM",
+    emoji: "🍛",
+    reason: "Iconic, comforting, and always worth the queue.",
+  },
+  {
+    name: "Devi's Corner",
+    cuisine: "Indian",
+    mood: "Spicy",
+    distance: "5 min",
+    rating: 4.4,
+    price: "RM",
+    emoji: "🍌",
+    reason: "Fast, nearby, and perfect when everyone wants something bold.",
+  },
+  {
+    name: "Brew & Bites TTDI",
+    cuisine: "Cafe",
+    mood: "Chill",
+    distance: "10 min",
+    rating: 4.3,
+    price: "RM RM",
+    emoji: "☕",
+    reason: "Soft landing dinner with coffee, snacks, and zero drama.",
+  },
+  {
+    name: "Sushi Hikari",
+    cuisine: "Japanese",
+    mood: "Clean",
+    distance: "11 min",
+    rating: 4.5,
+    price: "RM RM",
+    emoji: "🍣",
+    reason: "Fresh, light, and feels like a tiny dinner upgrade.",
+  },
+  {
+    name: "Penang Road Cendol",
+    cuisine: "Dessert",
+    mood: "Sweet",
+    distance: "12 min",
+    rating: 4.2,
+    price: "RM",
+    emoji: "🍧",
+    reason: "For dessert-first people who somehow still call it dinner.",
+  },
+  {
+    name: "Warung Pak Din",
+    cuisine: "Mamak",
+    mood: "Easy",
+    distance: "13 min",
+    rating: 4.4,
+    price: "RM",
+    emoji: "🫓",
+    reason: "Casual, close enough, and special enough to feel chosen.",
+  },
 ];
 
-function pickRandomIndex(length: number) {
-  return Math.floor(Math.random() * length);
+const cravings = ["Comfort", "Something new", "Family-friendly", "Fast", "Spicy", "Chill"];
+const cuisines = ["Mamak", "Malay", "Indian", "Cafe", "Japanese", "Dessert"];
+const vibes = ["Low effort", "Crowd pleaser", "Nearby", "Treat night", "No queue", "Cosy"];
+
+function classNames(...items: (string | boolean | undefined)[]) {
+  return items.filter(Boolean).join(" ");
 }
 
-function Reel({
-  label,
-  items,
-  selectedIndex,
-  spinning,
-  showIcon = false
-}: {
-  label: string;
-  items: string[];
-  selectedIndex: number;
-  spinning: boolean;
-  showIcon?: boolean;
-}) {
-  const visibleItems = useMemo(() => {
-    if (items.length === 0) return ["...", "...", "..."];
-    const selected = items[selectedIndex % items.length];
-    const before = items[(selectedIndex - 1 + items.length) % items.length];
-    const after = items[(selectedIndex + 1) % items.length];
-    return [before, selected, after];
-  }, [items, selectedIndex]);
+function useSlotSounds() {
+  const audioRef = useRef<AudioContext | null>(null);
 
+  const getAudio = () => {
+    if (typeof window === "undefined") return null;
+    if (!audioRef.current) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      audioRef.current = new AudioContextClass();
+    }
+    return audioRef.current;
+  };
+
+  const playTone = ({
+    frequency = 520,
+    duration = 0.06,
+    type = "sine" as OscillatorType,
+    gain = 0.075,
+    start = 0,
+    slideTo,
+  }: {
+    frequency?: number;
+    duration?: number;
+    type?: OscillatorType;
+    gain?: number;
+    start?: number;
+    slideTo?: number;
+  }) => {
+    const audio = getAudio();
+    if (!audio) return;
+
+    const oscillator = audio.createOscillator();
+    const volume = audio.createGain();
+    const filter = audio.createBiquadFilter();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audio.currentTime + start);
+
+    if (slideTo) {
+      oscillator.frequency.exponentialRampToValueAtTime(slideTo, audio.currentTime + start + duration);
+    }
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(4200, audio.currentTime + start);
+    filter.Q.setValueAtTime(0.7, audio.currentTime + start);
+
+    volume.gain.setValueAtTime(0.0001, audio.currentTime + start);
+    volume.gain.exponentialRampToValueAtTime(gain, audio.currentTime + start + 0.01);
+    volume.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + start + duration);
+
+    oscillator.connect(filter);
+    filter.connect(volume);
+    volume.connect(audio.destination);
+    oscillator.start(audio.currentTime + start);
+    oscillator.stop(audio.currentTime + start + duration + 0.03);
+  };
+
+  const playNoise = ({ duration = 0.035, gain = 0.04, start = 0 }) => {
+    const audio = getAudio();
+    if (!audio) return;
+
+    const bufferSize = audio.sampleRate * duration;
+    const buffer = audio.createBuffer(1, bufferSize, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    }
+
+    const source = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const volume = audio.createGain();
+
+    source.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1800, audio.currentTime + start);
+    filter.Q.setValueAtTime(4, audio.currentTime + start);
+
+    volume.gain.setValueAtTime(gain, audio.currentTime + start);
+    volume.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + start + duration);
+
+    source.connect(filter);
+    filter.connect(volume);
+    volume.connect(audio.destination);
+    source.start(audio.currentTime + start);
+    source.stop(audio.currentTime + start + duration);
+  };
+
+  const playChord = (notes: number[], options: any = {}) => {
+    notes.forEach((note) => {
+      playTone({
+        frequency: note,
+        duration: options.duration ?? 0.16,
+        type: options.type ?? "sine",
+        gain: options.gain ?? 0.04,
+        start: options.start ?? 0,
+        slideTo: options.slideTo,
+      });
+    });
+  };
+
+  const playArp = (notes: number[], options: any = {}) => {
+    notes.forEach((note, index) => {
+      playTone({
+        frequency: note,
+        duration: options.duration ?? 0.07,
+        type: options.type ?? "triangle",
+        gain: options.gain ?? 0.052,
+        start: (options.start ?? 0) + index * (options.gap ?? 0.055),
+        slideTo: options.slideTo ? note * options.slideTo : undefined,
+      });
+    });
+  };
+
+  const tick = () => {
+    const notes = [587.33, 659.25, 739.99, 880, 987.77];
+    const note = notes[Math.floor(Math.random() * notes.length)];
+    playTone({ frequency: note, duration: 0.032, type: "triangle", gain: 0.034, slideTo: note * 1.06 });
+    playTone({ frequency: note * 2, duration: 0.02, type: "sine", gain: 0.019, start: 0.012 });
+  };
+
+  const win = () => {
+    playNoise({ duration: 0.03, gain: 0.038 });
+    playTone({ frequency: 220, duration: 0.045, type: "triangle", gain: 0.034, slideTo: 330 });
+    playArp([659.25, 783.99, 987.77], { start: 0.09, duration: 0.075, gap: 0.07, gain: 0.06, type: "sine", slideTo: 1.02 });
+    setTimeout(() => {
+      playChord([1046.5, 1318.51, 1567.98], { duration: 0.22, gain: 0.034, type: "triangle" });
+      playTone({ frequency: 2093, duration: 0.16, type: "sine", gain: 0.03, start: 0.02, slideTo: 2349.32 });
+    }, 330);
+  };
+
+  const softClick = () => {
+    playNoise({ duration: 0.018, gain: 0.024 });
+    playTone({ frequency: 493.88, duration: 0.038, type: "triangle", gain: 0.038, slideTo: 659.25, start: 0.012 });
+    playTone({ frequency: 987.77, duration: 0.024, type: "sine", gain: 0.019, start: 0.038 });
+  };
+
+  return { tick, win, softClick };
+}
+
+function Reel({ label, items, value, spinning, delay = 0 }: { label: string, items: string[], value: string, spinning: boolean, delay?: number }) {
   return (
-    <div className="grid grid-cols-[5.1rem_1fr] items-stretch overflow-hidden rounded-[1.1rem] border border-neutral-200 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.045)]">
-      <div className="flex flex-col justify-between border-r border-neutral-100 bg-white px-3 py-3">
-        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-neutral-400">
-          {label}
-        </p>
-        {showIcon ? (
-          <div className="mt-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-[#ff385c]">
-            <Utensils className="h-3.5 w-3.5" />
-          </div>
-        ) : (
-          <p className="mt-3 text-[10px] font-semibold text-neutral-300">reel</p>
-        )}
+    <div className="rounded-[1.45rem] border border-zinc-200 bg-white p-3 shadow-sm">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-zinc-400">{label}</p>
+        <div className={classNames("h-2 w-2 rounded-full", spinning ? "animate-pulse bg-rose-500" : "bg-emerald-400")} />
       </div>
 
-      <div className="relative px-2 py-2 overflow-hidden h-[5.9rem]">
-        <div className="pointer-events-none absolute inset-x-2 top-1/2 h-10 -translate-y-1/2 rounded-xl border border-neutral-200 bg-white shadow-[0_8px_16px_rgba(15,23,42,0.06)] z-10" />
-
-        <motion.div
-          key={`${selectedIndex}-${spinning}`}
-          initial={{ y: spinning ? -80 : -34, opacity: 0.7, filter: "blur(2px)" }}
-          animate={{ y: -34, opacity: 1, filter: "blur(0px)" }}
-          transition={{ type: "spring", stiffness: 100, damping: 18, mass: 0.8 }}
-          className="relative z-0 space-y-1"
-        >
-          {visibleItems.map((item, index) => (
-            <div
-              key={`${item}-${index}`}
-              className={`flex h-8 items-center justify-center px-3 text-center transition-all ${
-                index === 1 ? "text-[15px] font-black text-neutral-950" : "text-xs font-semibold text-neutral-300"
-              }`}
-            >
-              <span className="truncate">{item}</span>
-            </div>
-          ))}
-        </motion.div>
+      <div className="relative h-16 overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50 shadow-inner">
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={spinning ? `${label}-spin` : value}
+            initial={{ y: spinning ? -24 : 16, opacity: 0, filter: "blur(6px)" }}
+            animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+            exit={{ y: 22, opacity: 0, filter: "blur(6px)" }}
+            transition={{ delay, type: "spring", stiffness: 460, damping: 32 }}
+            className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-extrabold text-zinc-950"
+          >
+            {spinning ? items[Math.floor(Math.random() * items.length)] : value}
+          </motion.div>
+        </AnimatePresence>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-white to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white to-transparent" />
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white/80 p-3 shadow-sm backdrop-blur">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500">
+        <Icon className="h-3.5 w-3.5" /> {label}
+      </div>
+      <p className="mt-1 text-sm font-black text-zinc-950">{value}</p>
     </div>
   );
 }
 
 export default function SlotMachine2() {
-  const [restaurants, setRestaurants] = useState<SpinnerRestaurant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [winner, setWinner] = useState(restaurants[5]);
+  const [craving, setCraving] = useState("Something new");
+  const [cuisine, setCuisine] = useState("Mamak");
+  const [vibe, setVibe] = useState("Nearby");
   const [spinning, setSpinning] = useState(false);
-  const [selected, setSelected] = useState({ craving: 0, cuisine: 0, restaurant: 0 });
-  const [hasSpun, setHasSpun] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
+  const [spinCount, setSpinCount] = useState(0);
+  const { tick, win, softClick } = useSlotSounds();
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
+  const winnerIndex = useMemo(() => restaurants.findIndex((item) => item.name === winner.name), [winner]);
 
-  const fetchRestaurants = async () => {
-    setLoading(true);
-    try {
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('is_active', true)
-        .limit(20);
-
-      const pool = data?.length ? data : MOCK_RESTAURANTS;
-      const mapped = pool.map((r, i) => ({
-        ...(r as SpinnerRestaurant),
-        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
-        accent: accents[i % accents.length],
-      }));
-      setRestaurants(mapped);
-    } catch {
-      setRestaurants(MOCK_RESTAURANTS.map((r, i) => ({
-        ...r,
-        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
-        accent: accents[i % accents.length],
-      })));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cuisines = useMemo(() => restaurants.map((r) => getCuisineLabel(r)), [restaurants]);
-  const names = useMemo(() => restaurants.map(r => r.name), [restaurants]);
-  const winner = restaurants[selected.restaurant % (restaurants.length || 1)] || restaurants[0];
-
-  function spin() {
-    if (spinning || restaurants.length === 0) return;
-
-    haptics.medium();
+  const spin = () => {
+    if (spinning) return;
     setSpinning(true);
-    setHasSpun(false);
-    sounds?.play('start', 0.5);
+    setSpinCount((current) => current + 1);
 
-    const totalSteps = 15;
-    let step = 0;
-    
-    const executeStep = () => {
-      step += 1;
-      sounds?.play('tick', 0.15);
+    const totalTicks = 18;
+    for (let i = 0; i < totalTicks; i++) {
+      setTimeout(() => {
+        const poolIndex = Math.floor(Math.random() * restaurants.length);
+        const next = restaurants[poolIndex];
+        setWinner(next);
+        setCraving(cravings[Math.floor(Math.random() * cravings.length)]);
+        setCuisine(cuisines[Math.floor(Math.random() * cuisines.length)]);
+        setVibe(vibes[Math.floor(Math.random() * vibes.length)]);
+        if (soundOn) tick();
+      }, i * 70 + i * i * 2.2);
+    }
 
-      setSelected({
-        craving: pickRandomIndex(cravings.length),
-        cuisine: pickRandomIndex(cuisines.length),
-        restaurant: pickRandomIndex(restaurants.length),
-      });
-
-      if (step < totalSteps) {
-        // Logarithmic easing for that "slowing down" feel
-        const nextDelay = 80 + (Math.pow(step / totalSteps, 2) * 350);
-        setTimeout(executeStep, nextDelay);
-      } else {
-        const finalRestIdx = pickRandomIndex(restaurants.length);
-        const finalCravIdx = pickRandomIndex(cravings.length);
-        
-        setSelected({
-          craving: finalCravIdx,
-          cuisine: finalRestIdx,
-          restaurant: finalRestIdx,
-        });
-
-        setTimeout(() => {
-          const picked = restaurants[finalRestIdx];
-          if (picked) {
-            recordSpin(picked.id, picked.name, cravings[finalCravIdx]);
-          }
-          haptics.success();
-          sounds?.play('reveal', 0.6);
-          setSpinning(false);
-          setHasSpun(true);
-        }, 400);
-      }
-    };
-
-    setTimeout(executeStep, 100);
-  }
-
-  const reset = () => {
-    setSelected({ craving: 0, cuisine: 0, restaurant: 0 });
-    setHasSpun(false);
+    setTimeout(() => {
+      const final = restaurants[Math.floor(Math.random() * restaurants.length)];
+      setWinner(final);
+      setCraving(final.mood === "Legendary" ? "Comfort" : final.mood === "Sweet" ? "Treat night" : "Something new");
+      setCuisine(final.cuisine);
+      setVibe(final.distance === "5 min" ? "Fast" : "Nearby");
+      setSpinning(false);
+      if (soundOn) win();
+    }, 1850);
   };
 
-  if (loading && restaurants.length === 0) return (
-    <div className="flex flex-col items-center justify-center p-32 w-full gap-4 bg-[#f7f5f2] min-h-screen">
-      <Loader2 className="animate-spin text-[#FF385C]" size={40} />
-      <p className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest">Loading Kitchen...</p>
-    </div>
-  );
+  const nudge = () => {
+    const nextIndex = (winnerIndex + 1) % restaurants.length;
+    const next = restaurants[nextIndex];
+    setWinner(next);
+    setCuisine(next.cuisine);
+    setCraving(next.mood);
+    if (soundOn) softClick();
+  };
 
   return (
-    <main className="min-h-screen bg-[#f7f5f2] px-3 py-3 font-sans text-neutral-950 flex items-center justify-center">
-      <section className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-[390px] flex-col rounded-[1.75rem] border border-neutral-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] overflow-hidden">
-        <div className="flex-1 space-y-3 p-3 overflow-y-auto">
-          <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-neutral-600 shadow-sm">
-              <Sparkles className="h-3 w-3 shrink-0 text-[#ff385c]" />
-              <span className="truncate">Decision slot v2</span>
+    <main className="min-h-screen bg-[#f7f5f2] px-4 py-5 font-[Inter,ui-sans-serif,system-ui] text-zinc-950 sm:px-6">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+        <header className="rounded-[2rem] border border-white bg-white/80 p-4 shadow-sm backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-600">
+              <Sparkles className="h-3.5 w-3.5" /> Dinner roulette
             </div>
-
             <button
-              onClick={reset}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-200 bg-white text-neutral-500 shadow-sm active:scale-95 transition-transform"
-              aria-label="Reset reels"
+              onClick={() => setSoundOn((current) => !current)}
+              className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm transition active:scale-95"
+              aria-label="Toggle sound"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
           </div>
 
-          <div className="rounded-[1.5rem] bg-[#faf9f7] p-4">
-            <h1 className="text-[2.45rem] font-black leading-[0.9] tracking-[-0.075em] text-neutral-950 italic">
-              Spin your next bite.
-            </h1>
-            <p className="mt-3 max-w-[18rem] text-[13px] leading-5 text-neutral-500">
-              Three synchronized reels, one winner. Let the crystal chime decide.
-            </p>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-[2.65rem] font-black leading-[0.9] tracking-[-0.07em] sm:text-5xl">
+                Spin your<br />next bite.
+              </h1>
+              <p className="mt-3 max-w-[19rem] text-sm leading-6 text-zinc-500">
+                Three tiny reels, one dinner answer. Less group chat fog, more makan.
+              </p>
+            </div>
+            <motion.div
+              animate={spinning ? { rotate: [0, -8, 8, -8, 0], scale: [1, 1.08, 1] } : { rotate: 0 }}
+              transition={{ repeat: spinning ? Infinity : 0, duration: 0.55 }}
+              className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.4rem] bg-zinc-950 text-3xl shadow-lg"
+            >
+              {winner.emoji}
+            </motion.div>
           </div>
+        </header>
 
-          <div className="space-y-2 rounded-[1.5rem] border border-neutral-200 bg-[#fbfaf8] p-2">
-            <Reel label="Craving" items={cravings} selectedIndex={selected.craving} spinning={spinning} />
-            <Reel label="Cuisine" items={cuisines} selectedIndex={selected.cuisine} spinning={spinning} />
-            <Reel label="Winner" items={names} selectedIndex={selected.restaurant} spinning={spinning} showIcon />
+        <section className="grid grid-cols-1 gap-2.5">
+          <Reel label="Craving" items={cravings} value={craving} spinning={spinning} />
+          <div className="grid grid-cols-2 gap-2.5">
+            <Reel label="Cuisine" items={cuisines} value={cuisine} spinning={spinning} delay={0.04} />
+            <Reel label="Vibe" items={vibes} value={vibe} spinning={spinning} delay={0.08} />
           </div>
+        </section>
 
-          <AnimatePresence mode="wait">
-            {hasSpun && (
-              <motion.div 
-                key={winner.id}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className={`relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-gradient-to-br ${winner.accent} p-5 shadow-sm`}
-              >
-                <div className="absolute right-4 top-4 rounded-full bg-white/70 px-3 py-1 text-[10px] font-black uppercase text-neutral-700 shadow-sm ring-1 ring-neutral-200/70">
-                  Result
-                </div>
+        <motion.section
+          layout
+          className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-rose-50 p-4 shadow-sm"
+        >
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-200/35 blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/45 blur-2xl" />
 
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm ring-1 ring-neutral-200">
-                  {winner.emoji}
-                </div>
-                
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-neutral-500 italic">Tonight&apos;s pick</p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950">
-                  {winner.name}
-                </h2>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-neutral-700 line-clamp-2">
-                  {getCuisineLabel(winner)} with a {(winner.vibe || 'Cozy').toLowerCase()} vibe. {winner.description}
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-3xl shadow-sm ring-1 ring-zinc-100">
+                {winner.emoji}
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-emerald-700">
+                  <Trophy className="h-3.5 w-3.5" /> Tonight's pick
                 </p>
+                <h2 className="mt-1 text-2xl font-black leading-tight tracking-[-0.05em]">{winner.name}</h2>
+              </div>
+            </div>
+          </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
-                      <Clock3 className="h-3 w-3" /> Dist
-                    </div>
-                    <p className="mt-1 text-xs font-black">{winner.distance}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
-                      <Star className="h-3 w-3" /> Rate
-                    </div>
-                    <p className="mt-1 text-xs font-black">{winner.rating}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
-                      <Utensils className="h-3 w-3" /> Price
-                    </div>
-                    <p className="mt-1 text-xs font-black">{winner.price_range}</p>
-                  </div>
-                </div>
+          <p className="relative mt-3 text-sm leading-6 text-zinc-600">{winner.reason}</p>
 
-                <Link
-                  href={`/restaurants/${winner.id}`}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-3.5 text-xs font-black uppercase tracking-widest text-white hover:bg-black transition-transform active:scale-95"
+          <div className="relative mt-4 grid grid-cols-3 gap-2">
+            <MiniStat icon={Clock3} label="Drive" value={winner.distance} />
+            <MiniStat icon={Star} label="Rating" value={winner.rating} />
+            <MiniStat icon={Utensils} label="Price" value={winner.price} />
+          </div>
+
+          <div className="relative mt-4 grid grid-cols-[1fr_auto] gap-2">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={spin}
+              disabled={spinning}
+              className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-[#ff385c] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(255,56,92,0.28)] transition disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Shuffle className={classNames("h-4 w-4", spinning && "animate-spin")} />
+              {spinning ? "Choosing..." : "Choose for me"}
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={nudge}
+              disabled={spinning}
+              className="grid h-14 w-14 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm disabled:opacity-50"
+              aria-label="Nudge to next restaurant"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </motion.button>
+          </div>
+        </motion.section>
+
+        <section className="rounded-[2rem] border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-zinc-400">Nearby options</p>
+              <h3 className="mt-1 text-lg font-black tracking-[-0.03em]">Restaurant pool</h3>
+            </div>
+            <div className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-500">{restaurants.length}</div>
+          </div>
+
+          <div className="space-y-2">
+            {restaurants.map((item, index) => {
+              const active = item.name === winner.name;
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => {
+                    setWinner(item);
+                    setCuisine(item.cuisine);
+                    setCraving(item.mood);
+                    if (soundOn) softClick();
+                  }}
+                  className={classNames(
+                    "flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition active:scale-[0.99]",
+                    active ? "border-rose-200 bg-rose-50" : "border-zinc-100 bg-white hover:bg-zinc-50"
+                  )}
                 >
-                  View Details
-                </Link>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-100 text-xl">{item.emoji}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-zinc-950">{item.name}</p>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-500">
+                      <MapPin className="h-3 w-3" /> {item.cuisine}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-zinc-600">{item.distance}</p>
+                    <p className="mt-0.5 text-[10px] font-bold text-zinc-400">#{index + 1}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-        <div className="sticky bottom-0 mt-auto border-t border-neutral-100 bg-white/90 p-3 backdrop-blur-xl z-20">
-          <button
-            onClick={spin}
-            disabled={spinning}
-            className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-[1.15rem] bg-[#ff385c] px-5 py-4 text-sm font-black text-white shadow-[0_14px_28px_rgba(255,56,92,0.3)] transition hover:-translate-y-0.5 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <Shuffle className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`} />
-            {spinning ? "Spinning..." : "Choose for me"}
-          </button>
-        </div>
-      </section>
+        <p className="pb-3 text-center text-xs text-zinc-400">
+          Spins today: <span className="font-black text-zinc-600">{spinCount}</span> · Tap any restaurant to force destiny politely.
+        </p>
+      </div>
     </main>
   );
 }
