@@ -1,6 +1,8 @@
 import AppShell from '@/components/layout/AppShell';
 import MakanjomSpinner from '@/components/MakanjomSpinner';
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <AppShell>
