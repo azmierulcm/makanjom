@@ -10,6 +10,11 @@ export const haptics = {
       navigator.vibrate(20);
     }
   },
+  heavy() {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(40);
+    }
+  },
   success() {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([15, 40, 25]);
