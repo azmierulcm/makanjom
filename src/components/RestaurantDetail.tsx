@@ -186,31 +186,17 @@ export default function RestaurantDetail({ id }: { id: string }) {
 
       {/* Facilities */}
       {restaurant.facilities && restaurant.facilities.length > 0 && (
-        <section className="mt-8 border-b border-neutral-100 pb-8">
-          <h2 className="mb-6 text-xl font-bold text-neutral-950">Facilities & Amenities</h2>
-          <div className="grid gap-8 sm:grid-cols-2">
+        <section className="mt-8 border-b border-neutral-100 pb-10">
+          <h2 className="mb-6 text-xl font-bold text-neutral-950">What this place offers</h2>
+          <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-12">
             {restaurant.facilities.map((facility) => {
               const Icon = (Icons[facility.icon as keyof typeof Icons] as Icons.LucideIcon) || Icons.HelpCircle;
               return (
-                <div key={facility.id} className="group rounded-[2rem] border border-neutral-100 bg-white p-6 transition-all hover:border-[#ff385c]/20 hover:shadow-md">
-                  <div className="flex gap-5">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-50 text-neutral-900 ring-1 ring-neutral-200 transition-colors group-hover:bg-[#ff385c]/5 group-hover:text-[#ff385c] group-hover:ring-[#ff385c]/20">
-                      <Icon size={24} strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-neutral-950">{facility.name}</h3>
-                      <p className="mt-1 text-base text-neutral-500 leading-relaxed">{facility.description}</p>
-                    </div>
+                <div key={facility.id} className="flex items-center gap-4">
+                  <div className="text-neutral-900">
+                    <Icon size={24} strokeWidth={1.5} />
                   </div>
-                  {facility.photo_url && (
-                    <div className="mt-6 overflow-hidden rounded-2xl">
-                      <img 
-                        src={facility.photo_url} 
-                        alt={facility.name} 
-                        className="aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                      />
-                    </div>
-                  )}
+                  <span className="text-base text-neutral-700">{facility.name}</span>
                 </div>
               );
             })}
