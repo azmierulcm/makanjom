@@ -56,8 +56,10 @@ export interface MenuItem {
   description: string | null;
   price: number;
   image_url: string | null;
+  images?: string[];
   category: string | null;
   is_available: boolean;
+  created_at?: string;
 }
 
 export interface Promotion {

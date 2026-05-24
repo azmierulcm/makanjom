@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Icons from 'lucide-react';
 import {
-  MapPin, Star, Heart, Tag, Utensils, ChevronLeft, Sparkles,
+  MapPin, Star, Heart, Tag, Utensils, ChevronLeft, Sparkles, X, ChevronRight, Plus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -25,6 +25,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<'menu' | 'reviews' | 'photos'>('menu');
   const [loading, setLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -299,13 +300,22 @@ export default function RestaurantDetail({ id }: { id: string }) {
                         >
                           <div className="space-y-3 border-t border-neutral-50 p-6 pt-0">
                             {items.map((item) => (
-                              <div key={item.id} className="flex items-center justify-between py-4 border-b border-neutral-50 last:border-0">
+                              <button
+                                key={item.id}
+                                onClick={() => setSelectedItem(item)}
+                                className="flex w-full items-center justify-between py-4 border-b border-neutral-50 last:border-0 text-left transition hover:bg-neutral-50/50 -mx-6 px-6"
+                              >
                                 <div className="min-w-0 pr-4">
                                   <p className="font-bold text-neutral-950 truncate">{item.name}</p>
                                   {item.description && <p className="mt-1 text-sm text-neutral-500 line-clamp-2">{item.description}</p>}
                                 </div>
-                                <p className="shrink-0 text-lg font-bold text-[#ff385c]">RM {item.price.toFixed(2)}</p>
-                              </div>
+                                <div className="flex items-center gap-4">
+                                  <p className="shrink-0 text-lg font-bold text-[#ff385c]">RM {item.price.toFixed(2)}</p>
+                                  {item.image_url && (
+                                    <img src={item.image_url} alt="" className="h-16 w-16 rounded-xl object-cover" />
+                                  )}
+                                </div>
+                              </button>
                             ))}
                           </div>
                         </motion.div>
@@ -360,6 +370,140 @@ export default function RestaurantDetail({ id }: { id: string }) {
           </div>
         )}
       </section>
+
+      {/* Item Detail Modal */}
+      <AnimatePresence>
+        {selectedItem && (
+          <MenuItemModal 
+            item={selectedItem} 
+            onClose={() => setSelectedItem(null)} 
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MenuItemModal({ item, onClose }: { item: MenuItem, onClose: () => void }) {
+  const [currentPhoto, setCurrentPhoto] = useState(0);
+  const [photos, setPhotos] = useState<string[]>(item.images || (item.image_url ? [item.image_url] : []));
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && photos.length < 3) {
+      const url = URL.createObjectURL(file);
+      setPhotos([...photos, url]);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm"
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] bg-white shadow-2xl"
+      >
+        {/* Photo Section */}
+        <div className="relative aspect-[4/3] bg-neutral-100">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/70"
+          >
+            <X size={20} />
+          </button>
+
+          <AnimatePresence mode="wait">
+            {photos.length > 0 ? (
+              <motion.img
+                key={photos[currentPhoto]}
+                src={photos[currentPhoto]}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center text-neutral-400">
+                <Utensils size={48} strokeWidth={1} />
+                <p className="mt-2 text-sm font-medium">No photos yet</p>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {photos.length > 1 && (
+            <div className="absolute inset-x-4 top-1/2 flex -translate-y-1/2 justify-between">
+              <button
+                onClick={(e) => { e.stopPropagation(); setCurrentPhoto((prev) => (prev - 1 + photos.length) % photos.length); }}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-neutral-950 shadow-lg backdrop-blur-sm transition hover:bg-white"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setCurrentPhoto((prev) => (prev + 1) % photos.length); }}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-neutral-950 shadow-lg backdrop-blur-sm transition hover:bg-white"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {/* Indicator & Upload Button Overlay */}
+          <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+            <div className="flex gap-1.5">
+              {photos.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 w-1.5 rounded-full transition-all ${
+                    i === currentPhoto ? "w-4 bg-white" : "bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {photos.length < 3 && (
+              <label className="group flex h-10 items-center gap-2 rounded-full bg-white/90 px-4 text-xs font-black uppercase tracking-widest text-neutral-950 shadow-lg backdrop-blur-sm transition hover:bg-white cursor-pointer active:scale-95">
+                <Plus size={14} strokeWidth={3} />
+                <span>Add Photo</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-neutral-950">{item.name}</h2>
+              <p className="mt-1 text-sm font-bold text-[#ff385c] uppercase tracking-[0.1em]">{item.category}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-neutral-950">RM {item.price.toFixed(2)}</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">per portion</p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-base leading-relaxed text-neutral-600">
+            {item.description || "Freshly prepared with premium ingredients. Our chef's special selection for today's menu."}
+          </p>
+
+          <button
+            onClick={onClose}
+            className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff385c] py-4 text-sm font-black text-white shadow-[0_14px_28px_rgba(255,56,92,0.25)] transition hover:bg-[#e93252] active:scale-[0.98]"
+          >
+            Select & Order <ChevronRight size={18} />
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
