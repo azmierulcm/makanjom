@@ -24,6 +24,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<'menu' | 'reviews' | 'photos'>('menu');
   const [loading, setLoading] = useState(true);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -55,6 +56,23 @@ export default function RestaurantDetail({ id }: { id: string }) {
   const handleSave = () => {
     const state = toggleSavedRestaurant(id);
     setSaved(state.savedRestaurants.includes(id));
+  };
+
+  const menuByCategory = useMemo(() => {
+    const groups: Record<string, MenuItem[]> = {};
+    menus.forEach((item) => {
+      const cat = item.category || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+    return groups;
+  }, [menus]);
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
   };
 
   if (loading) {
@@ -247,20 +265,55 @@ export default function RestaurantDetail({ id }: { id: string }) {
         </div>
 
         {activeTab === 'menu' && (
-          <div className="space-y-3">
-            {menus.length === 0 ? (
+          <div className="space-y-4">
+            {Object.keys(menuByCategory).length === 0 ? (
               <p className="text-neutral-500">Menu coming soon.</p>
             ) : (
-              menus.map((item) => (
-                <div key={item.id} className="flex items-center justify-between rounded-2xl border border-neutral-100 bg-white p-5">
-                  <div>
-                    <p className="font-bold text-neutral-950">{item.name}</p>
-                    {item.description && <p className="mt-1 text-sm text-neutral-500">{item.description}</p>}
-                    {item.category && <span className="mt-2 inline-block text-xs font-semibold text-neutral-400">{item.category}</span>}
+              Object.entries(menuByCategory).map(([category, items]) => {
+                const isExpanded = expandedCategories[category] !== false; // Default to expanded
+                return (
+                  <div key={category} className="overflow-hidden rounded-[2rem] border border-neutral-100 bg-white shadow-sm">
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="flex w-full items-center justify-between p-6 text-left transition hover:bg-neutral-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-[#ff385c]" />
+                        <h3 className="text-lg font-bold text-neutral-950">{category}</h3>
+                        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-black uppercase text-neutral-400">
+                          {items.length} items
+                        </span>
+                      </div>
+                      <Icons.ChevronDown
+                        className={`h-5 w-5 text-neutral-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        >
+                          <div className="space-y-3 border-t border-neutral-50 p-6 pt-0">
+                            {items.map((item) => (
+                              <div key={item.id} className="flex items-center justify-between py-4 border-b border-neutral-50 last:border-0">
+                                <div className="min-w-0 pr-4">
+                                  <p className="font-bold text-neutral-950 truncate">{item.name}</p>
+                                  {item.description && <p className="mt-1 text-sm text-neutral-500 line-clamp-2">{item.description}</p>}
+                                </div>
+                                <p className="shrink-0 text-lg font-bold text-[#ff385c]">RM {item.price.toFixed(2)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <p className="text-lg font-bold text-[#ff385c]">RM {item.price.toFixed(2)}</p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
