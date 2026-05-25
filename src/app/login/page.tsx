@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { Sparkles, ArrowRight, ChefHat, User, ShieldCheck, Mail, Lock, Loader2, Store } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -179,5 +179,13 @@ export default function LoginPage() {
                 By continuing, you agree to Makanjom&apos;s Terms of Service and Privacy Policy.
             </p>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#faf9f7]"><Loader2 className="animate-spin text-[#ff385c]" size={32} /></div>}>
+            <LoginForm />
+        </Suspense>
     );
 }
