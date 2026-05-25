@@ -33,6 +33,8 @@ export default function AdminCMS() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ title: '', content: '', type: 'news' as const });
 
   const fetchArticles = async () => {
     setLoading(true);
