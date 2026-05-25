@@ -1,4 +1,5 @@
 import type { Badge, SpinRecord } from './types';
+import { supabase } from './supabase';
 
 const STORAGE_KEY = 'makanjom_gamification';
 
@@ -8,6 +9,26 @@ export interface GamificationState {
   spinHistory: SpinRecord[];
   savedRestaurants: string[];
   gamesPlayed: number;
+  reviewCount: number;
+  spinStreak: number;
+  lastSpinDate: string | null; // ISO date string "YYYY-MM-DD"
+}
+
+export interface BadgeProgress {
+  id: string;
+  current: number;
+  total: number;
+}
+
+export function getBadgeProgress(state: GamificationState): Record<string, BadgeProgress> {
+  return {
+    'first-spin':  { id: 'first-spin',  current: Math.min(state.spinHistory.length, 1),         total: 1  },
+    'spin-master': { id: 'spin-master', current: Math.min(state.spinHistory.length, 10),         total: 10 },
+    'explorer':    { id: 'explorer',    current: Math.min(state.savedRestaurants.length, 5),     total: 5  },
+    'reviewer':    { id: 'reviewer',    current: Math.min(state.reviewCount ?? 0, 1),            total: 1  },
+    'game-on':     { id: 'game-on',     current: Math.min(state.gamesPlayed, 1),                 total: 1  },
+    'trivia-ace':  { id: 'trivia-ace',  current: state.badges.some(b => b.id === 'trivia-ace') ? 1 : 0, total: 1 },
+  };
 }
 
 const DEFAULT_BADGES: Badge[] = [
@@ -21,7 +42,7 @@ const DEFAULT_BADGES: Badge[] = [
 
 export function getGamificationState(): GamificationState {
   if (typeof window === 'undefined') {
-    return { points: 0, badges: [], spinHistory: [], savedRestaurants: [], gamesPlayed: 0 };
+    return { points: 0, badges: [], spinHistory: [], savedRestaurants: [], gamesPlayed: 0, reviewCount: 0, spinStreak: 0, lastSpinDate: null };
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -29,12 +50,23 @@ export function getGamificationState(): GamificationState {
   } catch {
     /* ignore */
   }
-  return { points: 0, badges: [], spinHistory: [], savedRestaurants: [], gamesPlayed: 0 };
+  return { points: 0, badges: [], spinHistory: [], savedRestaurants: [], gamesPlayed: 0, reviewCount: 0, spinStreak: 0, lastSpinDate: null };
 }
 
 function saveState(state: GamificationState) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Fire-and-forget DB sync so points/badges survive browser clears
+  syncToDb(state);
+}
+
+async function syncToDb(state: GamificationState) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from('profiles')
+    .update({ gamification_points: state.points, badges: state.badges })
+    .eq('id', user.id);
 }
 
 function unlockBadge(state: GamificationState, badgeId: string): GamificationState {
@@ -64,10 +96,28 @@ export function recordSpin(restaurantId: string, restaurantName: string, craving
     craving,
     created_at: new Date().toISOString(),
   };
+
+  // Streak logic
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const last = state.lastSpinDate;
+  let streak = state.spinStreak ?? 0;
+  if (last === today) {
+    // Already spun today — streak unchanged
+  } else if (last === yesterday) {
+    // Consecutive day
+    streak += 1;
+  } else {
+    // Missed a day or first spin ever
+    streak = 1;
+  }
+
   state = {
     ...state,
     spinHistory: [record, ...state.spinHistory].slice(0, 50),
     points: state.points + 10,
+    spinStreak: streak,
+    lastSpinDate: today,
   };
   state = unlockBadge(state, 'first-spin');
   if (state.spinHistory.length >= 10) state = unlockBadge(state, 'spin-master');
@@ -101,7 +151,7 @@ export function toggleSavedRestaurant(restaurantId: string): GamificationState {
 
 export function recordReview(): GamificationState {
   let state = getGamificationState();
-  state = { ...state, points: state.points + 50 };
+  state = { ...state, points: state.points + 50, reviewCount: (state.reviewCount ?? 0) + 1 };
   state = unlockBadge(state, 'reviewer');
   saveState(state);
   return state;

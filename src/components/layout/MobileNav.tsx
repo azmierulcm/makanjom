@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Users, Gamepad2, User } from 'lucide-react';
+import { Home, Search, Newspaper, Gamepad2, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 
 const navItems = [
-  { icon: Home, label: 'Spin', path: '/' },
-  { icon: Search, label: 'Explore', path: '/explore' },
-  { icon: Users, label: 'Creators', path: '/creators' },
-  { icon: Gamepad2, label: 'Games', path: '/games' },
-  { icon: User, label: 'Me', path: '/profile' },
+  { icon: Home,      label: 'Spin',    path: '/' },
+  { icon: Search,    label: 'Explore', path: '/explore' },
+  { icon: Newspaper, label: 'Feed',    path: '/articles' },
+  { icon: Gamepad2,  label: 'Games',   path: '/games' },
+  { icon: User,      label: 'Me',      path: '/profile' },
 ];
 
 export default function MobileNav() {

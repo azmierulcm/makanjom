@@ -16,6 +16,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
     price_range: 'RM RM',
     rating: 4.8,
     is_active: true,
+    business_hours: { Monday: '07:00-14:00', Tuesday: '07:00-14:00', Wednesday: '07:00-14:00', Thursday: '07:00-14:00', Friday: '07:00-14:00', Saturday: '07:00-15:00', Sunday: 'Closed' },
     facilities: [
       { id: 'f1', name: 'Kids Friendly', description: 'High chairs and child-friendly cutlery available.', icon: 'Baby', photo_url: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=800&q=80' },
       { id: 'f2', name: 'Air Conditioned', description: 'Cool and comfortable indoor seating.', icon: 'Wind' },

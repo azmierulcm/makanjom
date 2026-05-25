@@ -2,74 +2,68 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Sparkles, Utensils, Star, Shuffle, Clock3, Loader2 } from "lucide-react";
+import { MapPin, Sparkles, Utensils, Star, Shuffle, Clock3, Loader2, Heart, X, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/sounds';
 import { MOCK_RESTAURANTS } from '@/lib/mock-data';
-import { recordSpin } from '@/lib/gamification';
+import { recordSpin, toggleSavedRestaurant, getGamificationState } from '@/lib/gamification';
 import { haptics } from '@/lib/haptics';
 import { getCuisineLabel } from '@/components/RestaurantCard';
 import Link from 'next/link';
 import type { Restaurant } from '@/lib/types';
 
 interface SpinnerRestaurant extends Restaurant {
-  distance?: string;
   accent?: string;
 }
 
-const cravings = ["Comfort", "Something new", "Family-friendly", "Quick bite", "Cozy dinner", "Treat meal"];
+const VIBES = ["Any vibe", "Comfort food", "Something new", "Family outing", "Quick bite", "Cozy dinner", "Treat yourself"];
+const PRICES = ["Any price", "RM", "RM RM", "RM RM RM", "RM RM RM RM"];
 const accents = [
   "from-rose-50 to-orange-50",
   "from-emerald-50 to-lime-50",
   "from-sky-50 to-slate-50",
   "from-amber-50 to-red-50",
   "from-yellow-50 to-orange-50",
-  "from-green-50 to-teal-50"
+  "from-green-50 to-teal-50",
 ];
 
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 function pickRandomIndex(length: number) {
   return Math.floor(Math.random() * length);
 }
 
-function Reel({
-  title,
-  items,
-  selectedIndex,
-  spinning,
-}: {
-  title: string;
-  items: string[];
-  selectedIndex: number;
-  spinning: boolean;
-}) {
+function WinnerReel({ items, selectedIndex, spinning }: { items: string[]; selectedIndex: number; spinning: boolean }) {
   const visibleItems = useMemo(() => {
     if (items.length === 0) return ["...", "...", "..."];
-    const selected = items[selectedIndex % items.length];
-    const before = items[(selectedIndex - 1 + items.length) % items.length];
-    const after = items[(selectedIndex + 1) % items.length];
-    return [before, selected, after];
+    return [
+      items[(selectedIndex - 1 + items.length) % items.length],
+      items[selectedIndex % items.length],
+      items[(selectedIndex + 1) % items.length],
+    ];
   }, [items, selectedIndex]);
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm h-full">
-      <div className="absolute inset-x-4 top-1/2 h-14 -translate-y-1/2 rounded-2xl bg-neutral-950/[0.035]" />
-      <div className="border-b border-neutral-100 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">{title}</p>
+    <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
+      {/* Selection highlight */}
+      <div className="absolute inset-x-6 top-1/2 h-16 -translate-y-1/2 rounded-2xl bg-neutral-950/[0.04]" />
+      <div className="border-b border-neutral-100 px-6 py-3 text-center">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-neutral-400">Winner</p>
       </div>
-
-      <div className="relative h-44 px-4 py-4">
+      <div className="relative h-52 px-6 py-4">
         <motion.div
           key={`${selectedIndex}-${spinning}`}
-          initial={{ y: spinning ? -118 : -54, opacity: 0.7, filter: "blur(3px)" }}
-          animate={{ y: -54, opacity: 1, filter: "blur(0px)" }}
-          transition={{ type: "spring", stiffness: 90, damping: 15, mass: 0.8 }}
+          initial={{ y: spinning ? -130 : -60, opacity: 0.7, filter: "blur(3px)" }}
+          animate={{ y: -60, opacity: 1, filter: "blur(0px)" }}
+          transition={{ type: "spring", stiffness: 85, damping: 14, mass: 0.8 }}
           className="space-y-3"
         >
-          {visibleItems.map((item, index) => (
+          {visibleItems.map((item, i) => (
             <div
-              key={`${item}-${index}`}
-              className={`flex h-14 items-center justify-center rounded-2xl px-4 text-center text-sm font-semibold transition-all ${
-                index === 1 ? "bg-white text-neutral-950 shadow-sm ring-1 ring-neutral-200" : "text-neutral-300"
+              key={`${item}-${i}`}
+              className={`flex h-16 items-center justify-center rounded-2xl px-4 text-center text-base font-bold transition-all ${
+                i === 1 ? "bg-white text-neutral-950 shadow-sm ring-1 ring-neutral-200" : "text-neutral-300"
               }`}
             >
               <span className="truncate">{item}</span>
@@ -81,12 +75,49 @@ function Reel({
   );
 }
 
+function FilterChips({ label, options, selected, onChange }: {
+  label: string;
+  options: string[];
+  selected: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="shrink-0 text-xs font-black uppercase tracking-[0.18em] text-neutral-400 w-16">{label}</span>
+      <div className="-mx-1 flex gap-2 overflow-x-auto scroll-touch px-1 pb-1">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => { onChange(opt); haptics.light(); }}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition active:scale-95 min-h-[2.25rem] ${
+              selected === opt
+                ? 'bg-neutral-950 text-white shadow-sm'
+                : 'bg-white text-neutral-600 ring-1 ring-neutral-200 hover:bg-neutral-50'
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MakanjomSpinner() {
   const [restaurants, setRestaurants] = useState<SpinnerRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
-  const [selected, setSelected] = useState({ craving: 0, cuisine: 0, restaurant: 0 });
+  const [winnerIdx, setWinnerIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showSheet, setShowSheet] = useState(false);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  // Filters
+  const [filterVibe, setFilterVibe] = useState("Any vibe");
+  const [filterCuisine, setFilterCuisine] = useState("Any");
+  const [filterPrice, setFilterPrice] = useState("Any price");
+  const [showFilters, setShowFilters] = useState(false);
+  const [streak, setStreak] = useState(0);
 
   const fetchRestaurants = async () => {
     setLoading(true);
@@ -95,30 +126,16 @@ export default function MakanjomSpinner() {
         .from('restaurants')
         .select('*')
         .eq('is_active', true)
-        .limit(20);
+        .limit(50);
 
       if (fetchError) throw fetchError;
-      if (data?.length) {
-        const mapped = data.map((r, i) => ({
-          ...(r as SpinnerRestaurant),
-          distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
-          accent: accents[i % accents.length],
-        }));
-        setRestaurants(mapped);
-        setSelected((prev) => ({ ...prev, restaurant: 0, cuisine: 0 }));
-      } else {
-        setRestaurants(MOCK_RESTAURANTS.map((r, i) => ({
-          ...r,
-          distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
-          accent: accents[i % accents.length],
-        })));
-      }
-    } catch {
-      setRestaurants(MOCK_RESTAURANTS.map((r, i) => ({
+      const src = data?.length ? data : MOCK_RESTAURANTS;
+      setRestaurants((src as SpinnerRestaurant[]).map((r, i) => ({
         ...r,
-        distance: `${(Math.random() * 15 + 2).toFixed(0)} min`,
         accent: accents[i % accents.length],
       })));
+    } catch {
+      setRestaurants(MOCK_RESTAURANTS.map((r, i) => ({ ...r, accent: accents[i % accents.length] })));
     } finally {
       setLoading(false);
     }
@@ -126,194 +143,312 @@ export default function MakanjomSpinner() {
 
   useEffect(() => {
     fetchRestaurants();
+    const state = getGamificationState();
+    setSavedIds(state.savedRestaurants);
+    setStreak(state.spinStreak ?? 0);
   }, []);
 
-  const cuisines = useMemo(() => restaurants.map((r) => getCuisineLabel(r)), [restaurants]);
-  const names = useMemo(() => restaurants.map(r => r.name), [restaurants]);
-  const winner = restaurants[selected.restaurant % (restaurants.length || 1)] || restaurants[0];
+  // Derive unique cuisines from loaded restaurants
+  const cuisineOptions = useMemo(() => {
+    const seen = new Set<string>();
+    restaurants.forEach((r) => r.cuisine_types?.forEach((c) => seen.add(c)));
+    return ["Any", ...Array.from(seen).sort()];
+  }, [restaurants]);
+
+  // Apply filters to get the spin pool
+  const pool = useMemo(() => {
+    return restaurants.filter((r) => {
+      const cuisineMatch =
+        filterCuisine === "Any" ||
+        r.cuisine_types?.some((c) => c.toLowerCase() === filterCuisine.toLowerCase());
+      const priceMatch =
+        filterPrice === "Any price" || r.price_range === filterPrice;
+      return cuisineMatch && priceMatch;
+    });
+  }, [restaurants, filterCuisine, filterPrice]);
+
+  const poolNames = useMemo(() => pool.map((r) => r.name), [pool]);
+  const winner = pool[winnerIdx % (pool.length || 1)] ?? pool[0] ?? restaurants[0];
 
   function spin() {
-    if (spinning || restaurants.length === 0) return;
-
+    if (spinning || pool.length === 0) return;
     haptics.medium();
     setSpinning(true);
     sounds?.play('start', 0.5);
 
-    const totalSteps = 15;
+    const totalSteps = 14;
     let step = 0;
-    
+
     const executeStep = () => {
       step += 1;
       sounds?.play('tick', 0.15);
-
-      setSelected({
-        craving: pickRandomIndex(cravings.length),
-        cuisine: pickRandomIndex(cuisines.length),
-        restaurant: pickRandomIndex(restaurants.length),
-      });
+      setWinnerIdx(pickRandomIndex(pool.length));
 
       if (step < totalSteps) {
-        const nextDelay = 100 + (Math.pow(step / totalSteps, 2) * 300);
-        setTimeout(executeStep, nextDelay);
+        setTimeout(executeStep, 80 + Math.pow(step / totalSteps, 2) * 320);
       } else {
-        const finalIdx = pickRandomIndex(restaurants.length);
-        const cravingIdx = pickRandomIndex(cravings.length);
-        setSelected({
-          craving: cravingIdx,
-          cuisine: finalIdx,
-          restaurant: finalIdx,
-        });
-
+        const finalIdx = pickRandomIndex(pool.length);
+        setWinnerIdx(finalIdx);
         setTimeout(() => {
-          const picked = restaurants[finalIdx];
+          const picked = pool[finalIdx];
+          const vibe = filterVibe === "Any vibe" ? pickRandom(VIBES.slice(1)) : filterVibe;
           if (picked) {
-            recordSpin(picked.id, picked.name, cravings[cravingIdx]);
+            const newState = recordSpin(picked.id, picked.name, vibe);
+            setStreak(newState.spinStreak ?? 0);
           }
           haptics.success();
           sounds?.play('reveal', 0.6);
           setSpinning(false);
+          setShowSheet(true);
         }, 300);
       }
     };
 
-    setTimeout(executeStep, 100);
+    setTimeout(executeStep, 80);
   }
+
+  function handleSaveWinner() {
+    const state = toggleSavedRestaurant(winner.id);
+    setSavedIds(state.savedRestaurants);
+    haptics.light();
+  }
+
+  const activeFilterCount = [
+    filterVibe !== "Any vibe",
+    filterCuisine !== "Any",
+    filterPrice !== "Any price",
+  ].filter(Boolean).length;
 
   if (loading && restaurants.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-20 w-full gap-4">
-        <Loader2 className="animate-spin text-[#FF385C]" size={40} />
-        <p className="text-neutral-400 font-medium">Gathering nearby spots...</p>
+        <Loader2 className="animate-spin text-[#ff385c]" size={40} />
+        <p className="text-neutral-400 font-medium">Loading restaurants...</p>
       </div>
     );
   }
 
   if (error || (restaurants.length === 0 && !loading)) {
-      return (
-          <div className="p-10 bg-white rounded-[2.5rem] border border-neutral-200 text-center max-w-lg mx-auto shadow-sm">
-              <Utensils className="mx-auto mb-4 text-neutral-300" size={48} />
-              <h3 className="text-xl font-bold mb-2">No restaurants found</h3>
-              <p className="text-neutral-500 mb-6">{error || 'Your pool is empty.'}</p>
-              <button onClick={fetchRestaurants} className="px-6 py-2 bg-[#ff385c] text-white rounded-full font-semibold">Try Again</button>
-          </div>
-      );
+    return (
+      <div className="p-10 bg-white rounded-[2.5rem] border border-neutral-200 text-center max-w-lg mx-auto shadow-sm">
+        <Utensils className="mx-auto mb-4 text-neutral-300" size={48} />
+        <h3 className="text-xl font-bold mb-2">No restaurants found</h3>
+        <p className="text-neutral-500 mb-6">{error || 'Your pool is empty.'}</p>
+        <button onClick={fetchRestaurants} className="px-6 py-2 bg-[#ff385c] text-white rounded-full font-semibold">Try Again</button>
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-safe-sticky-cta sm:px-6 lg:px-8 md:pb-8">
-        <header className="flex flex-col gap-4 py-4 md:flex-row md:items-end md:justify-between md:gap-5 md:py-6">
-          <div className="max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm md:mb-4 md:px-4 md:py-2 md:text-sm">
+
+      {/* Page header */}
+      <header className="flex flex-col gap-4 py-4 md:flex-row md:items-end md:justify-between md:gap-5 md:py-6">
+        <div className="max-w-2xl">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm md:px-4 md:py-2 md:text-sm">
               <Sparkles className="h-3.5 w-3.5 text-[#ff385c] md:h-4 md:w-4" />
               Dinner decision, minus the group chat chaos
             </div>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-950 sm:text-4xl md:text-5xl lg:text-6xl">
-              Spin your next bite.
-            </h1>
-            <p className="mt-3 max-w-xl text-base leading-relaxed text-neutral-600 md:mt-4 md:text-lg md:leading-7">
-              Three reels, one winner — tap spin when you&apos;re ready to let fate pick dinner.
-            </p>
+            {streak > 0 && (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-700 shadow-sm">
+                🔥 {streak}-day streak
+              </div>
+            )}
+          </div>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-950 sm:text-4xl md:text-5xl lg:text-6xl">
+            Spin your next bite.
+          </h1>
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-neutral-600 md:mt-4 md:text-lg md:leading-7">
+            Set your mood, pick a cuisine, and let fate choose the restaurant.
+          </p>
+        </div>
+        <button
+          onClick={spin}
+          disabled={spinning || pool.length === 0}
+          className="group hidden min-h-11 items-center justify-center gap-3 rounded-full bg-[#ff385c] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_45px_rgba(255,56,92,0.25)] transition hover:-translate-y-0.5 hover:bg-[#e93252] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 md:inline-flex"
+        >
+          <Shuffle className={`h-5 w-5 ${spinning ? "animate-spin" : "transition group-hover:rotate-12"}`} />
+          {spinning ? "Spinning..." : "Choose for me"}
+        </button>
+      </header>
+
+      {/* Sticky mobile spin CTA */}
+      <div className="fixed bottom-nav-offset left-0 right-0 z-40 border-t border-neutral-100 bg-[#faf9f7]/95 px-4 py-3 backdrop-blur-lg md:hidden">
+        <button
+          onClick={spin}
+          disabled={spinning || pool.length === 0}
+          className="flex w-full min-h-12 items-center justify-center gap-3 rounded-2xl bg-[#ff385c] text-base font-bold text-white shadow-[0_12px_32px_rgba(255,56,92,0.35)] active:scale-[0.98] disabled:opacity-70"
+        >
+          <Shuffle className={`h-5 w-5 ${spinning ? 'animate-spin' : ''}`} />
+          {spinning ? 'Spinning...' : pool.length === 0 ? 'No matches — clear filters' : `Choose from ${pool.length} spots`}
+        </button>
+      </div>
+
+      {/* Filters panel */}
+      <div className="mb-4 rounded-[2rem] border border-neutral-200 bg-white/80 shadow-sm backdrop-blur">
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="flex w-full items-center justify-between px-5 py-4"
+        >
+          <div className="flex items-center gap-2.5">
+            <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
+            <span className="text-sm font-bold text-neutral-700">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-[#ff385c] px-2 py-0.5 text-xs font-black text-white">
+                {activeFilterCount}
+              </span>
+            )}
+            <span className="text-xs text-neutral-400">
+              {pool.length} spot{pool.length !== 1 ? 's' : ''} in pool
+            </span>
+          </div>
+          <motion.div animate={{ rotate: showFilters ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronRight className="h-4 w-4 rotate-90 text-neutral-400" />
+          </motion.div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-4 border-t border-neutral-100 px-5 py-4">
+                <FilterChips label="Vibe" options={VIBES} selected={filterVibe} onChange={setFilterVibe} />
+                <FilterChips label="Cuisine" options={cuisineOptions} selected={filterCuisine} onChange={setFilterCuisine} />
+                <FilterChips label="Price" options={PRICES} selected={filterPrice} onChange={setFilterPrice} />
+
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setFilterVibe("Any vibe"); setFilterCuisine("Any"); setFilterPrice("Any price"); }}
+                    className="text-xs font-semibold text-[#ff385c] hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Winner reel + result layout */}
+      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+
+        {/* Left: reel + result card */}
+        <div className="flex flex-col gap-4">
+          {/* Single winner reel */}
+          <div className="rounded-[2.5rem] border border-neutral-200 bg-white/60 p-3 shadow-sm backdrop-blur sm:p-4">
+            {pool.length === 0 ? (
+              <div className="flex h-52 items-center justify-center rounded-[2rem] bg-neutral-50 text-center">
+                <div>
+                  <p className="font-bold text-neutral-400">No matches</p>
+                  <p className="mt-1 text-sm text-neutral-300">Try adjusting your filters</p>
+                </div>
+              </div>
+            ) : (
+              <WinnerReel items={poolNames} selectedIndex={winnerIdx} spinning={spinning} />
+            )}
           </div>
 
-          <button
-            onClick={spin}
-            disabled={spinning}
-            className="group hidden min-h-11 items-center justify-center gap-3 rounded-full bg-[#ff385c] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_45px_rgba(255,56,92,0.25)] transition hover:-translate-y-0.5 hover:bg-[#e93252] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 md:inline-flex"
-          >
-            <Shuffle className={`h-5 w-5 ${spinning ? "animate-spin" : "transition group-hover:rotate-12"}`} />
-            {spinning ? "Spinning..." : "Choose for me"}
-          </button>
-        </header>
+          {/* Result card */}
+          {winner && (
+            <motion.div
+              layout
+              className={`relative overflow-hidden rounded-[2.5rem] border border-neutral-200 bg-gradient-to-br ${winner.accent} p-6 shadow-sm sm:p-8`}
+            >
+              <div className="absolute right-6 top-6 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-neutral-200/70">
+                Result
+              </div>
 
-        <div className="fixed bottom-nav-offset left-0 right-0 z-40 border-t border-neutral-100 bg-[#faf9f7]/95 px-4 py-3 backdrop-blur-lg md:hidden">
-          <button
-            onClick={spin}
-            disabled={spinning}
-            className="flex w-full min-h-12 items-center justify-center gap-3 rounded-2xl bg-[#ff385c] text-base font-bold text-white shadow-[0_12px_32px_rgba(255,56,92,0.35)] active:scale-[0.98] disabled:opacity-70"
-          >
-            <Shuffle className={`h-5 w-5 ${spinning ? 'animate-spin' : ''}`} />
-            {spinning ? 'Spinning...' : 'Choose for me'}
-          </button>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={winner.name}
+                  initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                >
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[1.8rem] bg-white text-4xl shadow-sm ring-1 ring-neutral-200">
+                    {winner.emoji}
+                  </div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">Tonight&apos;s pick</p>
+                  <h2 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
+                    {winner.name}
+                  </h2>
+                  <p className="mt-4 max-w-xl text-lg leading-8 text-neutral-700">
+                    {getCuisineLabel(winner)} · {(winner.vibe || 'Cozy')} vibe
+                    {filterVibe !== "Any vibe" ? ` · ${filterVibe}` : ''}
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link
+                      href={`/restaurants/${winner.id}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-neutral-950 px-6 py-3 text-sm font-bold text-white hover:bg-black active:scale-95"
+                    >
+                      View details <ChevronRight className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={handleSaveWinner}
+                      className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition active:scale-95 ${
+                        savedIds.includes(winner.id)
+                          ? 'bg-[#ff385c] text-white'
+                          : 'bg-white/80 text-neutral-700 ring-1 ring-neutral-200'
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${savedIds.includes(winner.id) ? 'fill-white' : ''}`} />
+                      {savedIds.includes(winner.id) ? 'Saved' : 'Save'}
+                    </button>
+                  </div>
+
+                  <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                    {winner.distance && (
+                      <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
+                        <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
+                          <Clock3 className="h-4 w-4" /> Distance
+                        </div>
+                        <p className="mt-2 text-xl font-semibold">{winner.distance}</p>
+                      </div>
+                    )}
+                    <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
+                      <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
+                        <Star className="h-4 w-4" /> Rating
+                      </div>
+                      <p className="mt-2 text-xl font-semibold">{winner.rating}</p>
+                    </div>
+                    <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
+                      <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
+                        <Utensils className="h-4 w-4" /> Price
+                      </div>
+                      <p className="mt-2 text-xl font-semibold">{winner.price_range}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          )}
         </div>
 
-        <section className="grid gap-4 rounded-[2.5rem] border border-neutral-200 bg-white/60 p-3 shadow-sm backdrop-blur md:grid-cols-3 md:p-4">
-          <Reel title="Craving" items={cravings} selectedIndex={selected.craving} spinning={spinning} />
-          <Reel title="Cuisine" items={cuisines} selectedIndex={selected.cuisine} spinning={spinning} />
-          <Reel title="Winner" items={names} selectedIndex={selected.restaurant} spinning={spinning} />
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <motion.div
-            layout
-            className={`relative overflow-hidden rounded-[2.5rem] border border-neutral-200 bg-gradient-to-br ${winner.accent} p-6 shadow-sm sm:p-8`}
-          >
-            <div className="absolute right-6 top-6 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-neutral-200/70">
-              Result
+        {/* Right: restaurant pool */}
+        <aside className="rounded-[2.5rem] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-neutral-400">Spin pool</p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Available spots</h3>
             </div>
+            <div className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-semibold text-neutral-500">{pool.length}</div>
+          </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={winner.name}
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-              >
-                <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-[1.8rem] bg-white text-4xl shadow-sm ring-1 ring-neutral-200">
-                  {winner.emoji}
-                </div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">Tonight&apos;s pick</p>
-                <h2 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
-                  {winner.name}
-                </h2>
-                <p className="mt-4 max-w-xl text-lg leading-8 text-neutral-700">
-                  {getCuisineLabel(winner)} with a {(winner.vibe || 'Cozy').toLowerCase()} vibe. Close enough to be easy, special enough to feel chosen.
-                </p>
-
-                <Link
-                  href={`/restaurants/${winner.id}`}
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-neutral-950 px-6 py-3 text-sm font-bold text-white hover:bg-black"
-                >
-                  View venue details
-                </Link>
-
-                <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
-                      <Clock3 className="h-4 w-4" /> Distance
-                    </div>
-                    <p className="mt-2 text-xl font-semibold">{winner.distance}</p>
-                  </div>
-                  <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
-                      <Star className="h-4 w-4" /> Rating
-                    </div>
-                    <p className="mt-2 text-xl font-semibold">{winner.rating}</p>
-                  </div>
-                  <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
-                      <Utensils className="h-4 w-4" /> Price
-                    </div>
-                    <p className="mt-2 text-xl font-semibold">{winner.price_range}</p>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </motion.div>
-
-          <aside className="rounded-[2.5rem] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-neutral-400">Nearby options</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Restaurant pool</h3>
-              </div>
-              <div className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-semibold text-neutral-500">{restaurants.length}</div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {restaurants.map((item) => {
-                const index = restaurants.indexOf(item);
-                const active = index === selected.restaurant;
+          <div className="mt-5 space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
+            {pool.length === 0 ? (
+              <p className="py-6 text-center text-sm text-neutral-400">No restaurants match your filters.</p>
+            ) : (
+              pool.map((item, index) => {
+                const active = index === winnerIdx % pool.length;
                 return (
                   <Link
                     key={item.id}
@@ -329,16 +464,98 @@ export default function MakanjomSpinner() {
                       <p className="truncate font-semibold text-neutral-950">{item.name}</p>
                       <div className="mt-1 flex items-center gap-2 text-sm text-neutral-500">
                         <MapPin className="h-3.5 w-3.5" />
-                        <span>{getCuisineLabel(item)}</span>
+                        <span className="truncate">{getCuisineLabel(item)}</span>
                       </div>
                     </div>
-                    <div className="text-right text-sm font-semibold text-neutral-500">{item.distance}</div>
+                    <span className="shrink-0 text-xs font-semibold text-neutral-400">{item.price_range}</span>
                   </Link>
                 );
-              })}
-            </div>
-          </aside>
-        </section>
+              })
+            )}
+          </div>
+        </aside>
+      </section>
+
+      {/* Mobile Result Bottom Sheet */}
+      <AnimatePresence>
+        {showSheet && winner && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSheet(false)}
+              className="fixed inset-0 z-[60] bg-neutral-950/50 backdrop-blur-sm md:hidden"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+              className="fixed bottom-0 left-0 right-0 z-[70] overflow-hidden rounded-t-[2.5rem] bg-white shadow-2xl md:hidden"
+              style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-neutral-200" />
+              </div>
+              <button
+                onClick={() => setShowSheet(false)}
+                className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500"
+              >
+                <X size={16} />
+              </button>
+
+              <div className={`relative mx-4 mt-4 overflow-hidden rounded-[2rem] bg-gradient-to-br ${winner.accent} p-6`}>
+                {winner.images?.[0] && (
+                  <img src={winner.images[0]} alt={winner.name} className="absolute inset-0 h-full w-full object-cover opacity-25" />
+                )}
+                <p className="relative text-xs font-black uppercase tracking-[0.2em] text-neutral-500">🎰 Tonight&apos;s pick</p>
+                <div className="relative mt-3 flex items-center gap-3">
+                  <span className="text-4xl">{winner.emoji}</span>
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-neutral-950">{winner.name}</h2>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-neutral-600">
+                      <span className="flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{winner.rating}
+                      </span>
+                      <span>{winner.price_range}</span>
+                      <span>{winner.vibe}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 px-4">
+                <Link
+                  href={`/restaurants/${winner.id}`}
+                  onClick={() => setShowSheet(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-4 text-sm font-black text-white"
+                >
+                  View venue details <ChevronRight size={16} />
+                </Link>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleSaveWinner}
+                    className={`flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition active:scale-95 ${
+                      savedIds.includes(winner.id) ? 'bg-[#ff385c] text-white' : 'bg-neutral-100 text-neutral-700'
+                    }`}
+                  >
+                    <Heart size={16} className={savedIds.includes(winner.id) ? 'fill-white' : ''} />
+                    {savedIds.includes(winner.id) ? 'Saved' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => { setShowSheet(false); spin(); }}
+                    disabled={spinning}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-100 py-3.5 text-sm font-bold text-neutral-700 active:scale-95 disabled:opacity-50"
+                  >
+                    <Shuffle size={16} /> Spin again
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

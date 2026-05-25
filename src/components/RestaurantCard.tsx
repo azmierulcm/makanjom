@@ -59,8 +59,10 @@ export default function RestaurantCard({ restaurant, index = 0 }: { restaurant: 
           {restaurant.distance && (
             <span className="text-xs font-semibold text-neutral-400">{restaurant.distance} away</span>
           )}
-          <span className="ml-auto flex items-center gap-1 text-sm font-semibold text-[#ff385c] opacity-0 transition group-hover:opacity-100">
-            View details <ChevronRight className="h-4 w-4" />
+          {/* Always visible on mobile, animated on desktop */}
+          <span className="ml-auto flex items-center gap-1 text-sm font-semibold text-[#ff385c] sm:opacity-0 sm:transition sm:group-hover:opacity-100">
+            <span className="hidden sm:inline">View details</span>
+            <ChevronRight className="h-4 w-4" />
           </span>
         </div>
       </div>

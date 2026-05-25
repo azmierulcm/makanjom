@@ -46,9 +46,9 @@ export default function Header() {
         <nav className="hidden items-center gap-8 md:flex">
           <Link href="/" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Spin</Link>
           <Link href="/explore" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Explore</Link>
-          <Link href="/creators" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
           <Link href="/articles" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Feed</Link>
           <Link href="/games" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Games</Link>
+          <Link href="/creators" className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 transition-colors hover:text-neutral-950">Creators</Link>
           
           <div className="mx-1 h-6 w-px bg-neutral-100" />
 
@@ -68,25 +68,6 @@ export default function Header() {
           )}
         </nav>
 
-        <div className="flex items-center gap-3 md:hidden">
-          {user ? (
-            <Link
-              href="/profile"
-              className="touch-target rounded-2xl bg-neutral-50 text-neutral-500"
-              aria-label="Profile"
-            >
-              <User size={20} />
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="touch-target rounded-2xl bg-neutral-50 text-neutral-500"
-              aria-label="Sign In"
-            >
-              <User size={20} />
-            </Link>
-          )}
-        </div>
       </div>
     </header>
   );
