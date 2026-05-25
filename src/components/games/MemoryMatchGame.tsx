@@ -42,8 +42,8 @@ export default function MemoryMatchGame({ onPointsEarned }: { onPointsEarned?: (
       setMoves((m) => m + 1);
       const [a, b] = newFlipped;
       if (next[a].emoji === next[b].emoji) {
-        next[a].matched = true;
-        next[b].matched = true;
+        next[a] = { ...next[a], matched: true };
+        next[b] = { ...next[b], matched: true };
         setCards([...next]);
         setFlipped([]);
         sounds?.play('reveal', 0.3);
@@ -55,8 +55,8 @@ export default function MemoryMatchGame({ onPointsEarned }: { onPointsEarned?: (
         }
       } else {
         setTimeout(() => {
-          next[a].flipped = false;
-          next[b].flipped = false;
+          next[a] = { ...next[a], flipped: false };
+          next[b] = { ...next[b], flipped: false };
           setCards([...next]);
           setFlipped([]);
         }, 700);

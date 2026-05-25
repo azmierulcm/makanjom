@@ -172,6 +172,21 @@ function useSlotSounds() {
 }
 
 function Reel({ label, items, value, spinning, delay = 0 }: { label: string, items: string[], value: string, spinning: boolean, delay?: number }) {
+  const [displayValue, setDisplayValue] = useState(value);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (spinning) {
+      interval = setInterval(() => {
+        const randomIndex = Math.floor(Math.random() * items.length);
+        setDisplayValue(items[randomIndex] || '...');
+      }, 100);
+    } else {
+      setDisplayValue(value);
+    }
+    return () => clearInterval(interval);
+  }, [spinning, value, items]);
+
   return (
     <div className="rounded-[1.45rem] border border-zinc-200 bg-white p-3 shadow-sm">
       <div className="mb-2 flex items-center justify-between px-1">
@@ -182,14 +197,14 @@ function Reel({ label, items, value, spinning, delay = 0 }: { label: string, ite
       <div className="relative h-16 overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50 shadow-inner">
         <AnimatePresence mode="popLayout">
           <motion.div
-            key={spinning ? `${label}-spin` : value}
+            key={spinning ? `${label}-spin-${displayValue}` : value}
             initial={{ y: spinning ? -24 : 16, opacity: 0, filter: "blur(6px)" }}
             animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
             exit={{ y: 22, opacity: 0, filter: "blur(6px)" }}
             transition={{ delay, type: "spring", stiffness: 460, damping: 32 }}
             className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-extrabold text-zinc-950"
           >
-            {spinning ? items[Math.floor(Math.random() * items.length)] : value}
+            {displayValue}
           </motion.div>
         </AnimatePresence>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-white to-transparent" />

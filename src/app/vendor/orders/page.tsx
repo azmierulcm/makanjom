@@ -19,6 +19,18 @@ export default function OrderQueue() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setOrders(data as Order[]);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     fetchOrders();
 
@@ -47,18 +59,6 @@ export default function OrderQueue() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setOrders(data as Order[]);
-    }
-    setLoading(false);
-  };
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase

@@ -33,8 +33,19 @@ export default function AdminCMS() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ title: '', content: '', type: 'news' });
+
+  const fetchArticles = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setArticles(data as Article[]);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,14 +56,14 @@ export default function AdminCMS() {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         setRole(profile?.role || null);
         fetchArticles();
+      } else {
+        window.location.href = '/login?redirect=/admin';
       }
       setAuthLoading(false);
     };
     checkAuth();
   }, []);
 
-  const fetchArticles = async () => {
-...
   const handleSave = async () => {
     const { error } = await supabase.from('articles').insert([{ ...formData, author_id: user?.id }]);
     if (!error) {
@@ -67,12 +78,7 @@ export default function AdminCMS() {
     window.location.href = '/login';
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
-
-  if (!user) {
-      if (typeof window !== 'undefined') window.location.href = '/login?redirect=/admin';
-      return null;
-  }
+  if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
 
   if (role !== 'admin') return (
       <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center px-6 text-center">

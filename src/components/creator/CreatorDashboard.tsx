@@ -38,6 +38,8 @@ export default function CreatorDashboard() {
             setAreas(MOCK_CREATORS[0].expertise_areas.join(', '));
             setCuisines(MOCK_CREATORS[0].expertise_cuisines.join(', '));
         }
+      } else {
+        window.location.href = '/login?redirect=/creator';
       }
       setAuthLoading(false);
       setLoading(false);
@@ -72,12 +74,7 @@ export default function CreatorDashboard() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
-
-  if (!user) {
-      if (typeof window !== 'undefined') window.location.href = '/login?redirect=/creator';
-      return null;
-  }
+  if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#ff385c]/20 border-t-[#ff385c] rounded-full animate-spin" /></div>;
 
   if (role !== 'creator' && role !== 'admin') return (
       <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center px-6 text-center">
@@ -105,7 +102,6 @@ export default function CreatorDashboard() {
         <h1 className="text-4xl font-bold tracking-tight text-neutral-950">Your dashboard</h1>
         <p className="mt-2 text-neutral-600">Curate your profile, showcase your expertise, and drive the platform&apos;s content.</p>
       </header>
-...
 
       <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
         <section className="space-y-6 rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">

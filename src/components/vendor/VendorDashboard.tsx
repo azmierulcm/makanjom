@@ -63,32 +63,6 @@ export default function VendorDashboard() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setAuthLoading(false);
-      if (user) {
-        fetchRestaurantAndData(user.id);
-      }
-    };
-    
-    checkUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRestaurantAndData(session.user.id);
-      } else {
-        setRestaurant(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   const fetchRestaurantAndData = async (userId: string) => {
     setLoading(true);
     const { data: restData } = await supabase
@@ -118,6 +92,32 @@ export default function VendorDashboard() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setAuthLoading(false);
+      if (user) {
+        fetchRestaurantAndData(user.id);
+      }
+    };
+    
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchRestaurantAndData(session.user.id);
+      } else {
+        setRestaurant(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSignOut = async () => {
       await supabase.auth.signOut();

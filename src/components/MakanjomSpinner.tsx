@@ -88,10 +88,6 @@ export default function MakanjomSpinner() {
   const [selected, setSelected] = useState({ craving: 0, cuisine: 0, restaurant: 0 });
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
@@ -127,6 +123,10 @@ export default function MakanjomSpinner() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   const cuisines = useMemo(() => restaurants.map((r) => getCuisineLabel(r)), [restaurants]);
   const names = useMemo(() => restaurants.map(r => r.name), [restaurants]);
