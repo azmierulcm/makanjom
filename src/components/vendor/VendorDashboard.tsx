@@ -376,6 +376,22 @@ function VendorOnboarding({
     if (!name.trim()) { setError('Please enter your restaurant name.'); return; }
     setSaving(true);
     setError(null);
+
+    // Ensure the profile row exists — it may be missing if the trigger
+    // failed during registration. Upsert so it's idempotent.
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: userId,
+      role: 'vendor',
+      full_name: user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? null,
+    }, { onConflict: 'id' });
+
+    if (profileError) {
+      setError('Failed to set up your account profile: ' + profileError.message);
+      setSaving(false);
+      return;
+    }
+
     const { error: dbError } = await supabase.from('restaurants').insert({
       vendor_id: userId,
       name: name.trim(),
