@@ -7,7 +7,7 @@ import * as Icons from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import {
   ChevronRight, Package, Clock3, Store, LayoutGrid,
-  Plus, Utensils, ChevronDown, ChevronUp, X, LogOut, Lock, Camera,
+  Plus, Utensils, ChevronDown, ChevronUp, X, LogOut, Lock, Pencil, Check,
 } from 'lucide-react';
 import { normalizeMenuItem } from '@/lib/menus';
 import type { MenuItem, Facility } from '@/lib/types';
@@ -36,6 +36,9 @@ interface Restaurant {
   description: string | null;
   cuisine_types: string[];
   emoji: string;
+  price_range: string;
+  vibe: string;
+  address: string | null;
   facilities: Facility[];
   tier: 'free' | 'basic_order' | 'premium';
 }
@@ -291,11 +294,7 @@ export default function VendorDashboard() {
               exit={{ opacity: 0, y: -10 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              {restaurant.tier === 'free' ? (
-                <div className="col-span-full">
-                  <UpgradeGating tier="Basic Order" message="Track real-time orders and update their status instantly." />
-                </div>
-              ) : activeOrders.length > 0 ? (
+              {activeOrders.length > 0 ? (
                 activeOrders.map((order) => (
                   <OrderCard key={order.id} order={order} onUpdate={updateOrderStatus} />
                 ))
@@ -331,8 +330,8 @@ export default function VendorDashboard() {
               exit={{ opacity: 0, y: -10 }}
             >
               <ListingManager
-                restaurantId={restaurant.id}
-                initialFacilities={restaurant.facilities ?? []}
+                restaurant={restaurant}
+                onRestaurantUpdate={() => fetchRestaurantAndData(user.id)}
               />
             </motion.section>
           )}
@@ -703,17 +702,37 @@ function BookingCard({
 
 // ─── ListingManager ───────────────────────────────────────────────────────────
 
+const PRICE_RANGES = ['RM', 'RM RM', 'RM RM RM', 'RM RM RM RM'];
+const VIBE_OPTIONS = ['Cozy', 'Casual', 'Fine Dining', 'Cafe', 'Street Food', 'Family', 'Romantic', 'Trendy'];
+
 function ListingManager({
-  restaurantId,
-  initialFacilities,
+  restaurant,
+  onRestaurantUpdate,
 }: {
-  restaurantId: string;
-  initialFacilities: Facility[];
+  restaurant: Restaurant;
+  onRestaurantUpdate: () => void;
 }) {
+  const restaurantId = restaurant.id;
+
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-  const [facilities, setFacilities] = useState<Facility[]>(initialFacilities);
+  const [facilities, setFacilities] = useState<Facility[]>(restaurant.facilities ?? []);
+
+  // Restaurant info editing
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({
+    name: restaurant.name,
+    description: restaurant.description ?? '',
+    address: restaurant.address ?? '',
+    price_range: restaurant.price_range ?? 'RM RM',
+    vibe: restaurant.vibe ?? 'Cozy',
+    cuisine_types: restaurant.cuisine_types ?? [] as string[],
+    emoji: restaurant.emoji ?? '🍽️',
+  });
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [infoError, setInfoError] = useState<string | null>(null);
+  const [infoSuccess, setInfoSuccess] = useState(false);
 
   // Edit item modal
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -734,6 +753,31 @@ function ListingManager({
   const [newAmenityName, setNewAmenityName] = useState('');
   const [newAmenityIcon, setNewAmenityIcon] = useState('Utensils');
   const [savingAmenity, setSavingAmenity] = useState(false);
+
+  const saveInfo = async () => {
+    if (!infoForm.name.trim()) { setInfoError('Restaurant name is required.'); return; }
+    setSavingInfo(true);
+    setInfoError(null);
+    const { error } = await supabase.from('restaurants').update({
+      name: infoForm.name.trim(),
+      description: infoForm.description.trim() || null,
+      address: infoForm.address.trim() || null,
+      price_range: infoForm.price_range,
+      vibe: infoForm.vibe,
+      cuisine_types: infoForm.cuisine_types,
+      emoji: infoForm.emoji,
+    }).eq('id', restaurantId);
+
+    if (error) {
+      setInfoError(error.message);
+    } else {
+      setEditingInfo(false);
+      setInfoSuccess(true);
+      onRestaurantUpdate();
+      setTimeout(() => setInfoSuccess(false), 3000);
+    }
+    setSavingInfo(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -883,32 +927,159 @@ function ListingManager({
   type LucideIcon = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 
   return (
-    <div className="space-y-12">
-      {/* Gallery */}
-      <section className="bg-white p-5 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border border-neutral-200 shadow-sm">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+    <div className="space-y-10">
+      {/* Restaurant Info */}
+      <section className="bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border border-neutral-200 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-neutral-950">Gallery & Identity</h3>
-            <p className="text-neutral-500 text-sm mt-1">Manage storefront images and brand identity.</p>
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-neutral-950">Restaurant Info</h3>
+            <p className="text-neutral-500 text-sm mt-1">Edit your listing details visible to customers.</p>
           </div>
-          <button
-            onClick={() => alert('Image upload requires Storage setup — coming soon.')}
-            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-neutral-800 transition-all"
-          >
-            Update Gallery
-          </button>
+          {!editingInfo && (
+            <button
+              onClick={() => { setEditingInfo(true); setInfoError(null); }}
+              className="flex items-center gap-2 px-5 py-2.5 border border-neutral-200 rounded-full text-xs font-black uppercase tracking-widest text-neutral-600 hover:border-neutral-400 transition-all"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="aspect-square bg-neutral-100 rounded-2xl md:rounded-3xl flex flex-col items-center justify-center border-2 border-dashed border-neutral-200 text-neutral-400">
-            <Camera size={24} strokeWidth={1} />
-            <span className="text-[8px] md:text-[10px] font-bold mt-2 uppercase tracking-widest text-center">Main Hero</span>
+
+        {infoSuccess && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs font-bold text-emerald-700">
+            <Check size={14} /> Saved successfully
           </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="aspect-square bg-neutral-50 rounded-2xl md:rounded-3xl flex items-center justify-center text-neutral-300 border border-neutral-100">
-              <LayoutGrid size={20} />
+        )}
+
+        {editingInfo ? (
+          <div className="space-y-5">
+            {/* Name + Emoji row */}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Name *</label>
+                <input
+                  type="text"
+                  value={infoForm.name}
+                  onChange={(e) => setInfoForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Emoji</label>
+                <input
+                  type="text"
+                  value={infoForm.emoji}
+                  onChange={(e) => setInfoForm(f => ({ ...f, emoji: e.target.value }))}
+                  className="w-16 px-3 py-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl text-xl text-center outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+                />
+              </div>
             </div>
-          ))}
-        </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Description</label>
+              <textarea
+                value={infoForm.description}
+                onChange={(e) => setInfoForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                placeholder="What makes your restaurant special?"
+                className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-medium outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all resize-none"
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Address</label>
+              <input
+                type="text"
+                value={infoForm.address}
+                onChange={(e) => setInfoForm(f => ({ ...f, address: e.target.value }))}
+                placeholder="e.g. 12, Jalan Bukit Bintang, KL"
+                className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+              />
+            </div>
+
+            {/* Price range + Vibe */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Price Range</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRICE_RANGES.map(p => (
+                    <button key={p} type="button" onClick={() => setInfoForm(f => ({ ...f, price_range: p }))}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${infoForm.price_range === p ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-100 text-neutral-500 hover:border-neutral-300'}`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Vibe</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {VIBE_OPTIONS.map(v => (
+                    <button key={v} type="button" onClick={() => setInfoForm(f => ({ ...f, vibe: v }))}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${infoForm.vibe === v ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-100 text-neutral-500 hover:border-neutral-300'}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Cuisine types */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">Cuisine Types</label>
+              <div className="flex flex-wrap gap-1.5">
+                {['Malaysian','Chinese','Indian','Western','Japanese','Korean','Thai','Italian','Middle Eastern','Fusion'].map(c => (
+                  <button key={c} type="button"
+                    onClick={() => setInfoForm(f => ({
+                      ...f,
+                      cuisine_types: f.cuisine_types.includes(c)
+                        ? f.cuisine_types.filter(x => x !== c)
+                        : [...f.cuisine_types, c]
+                    }))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${infoForm.cuisine_types.includes(c) ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-100 text-neutral-500 hover:border-neutral-300'}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {infoError && (
+              <p className="px-4 py-3 rounded-2xl bg-red-50 border border-red-100 text-xs font-bold text-red-600">{infoError}</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={saveInfo} disabled={savingInfo}
+                className="flex-1 py-4 bg-neutral-950 text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-50 active:scale-95">
+                {savingInfo ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button onClick={() => { setEditingInfo(false); setInfoError(null); }}
+                className="px-6 py-4 border border-neutral-200 rounded-full text-xs font-black uppercase tracking-widest text-neutral-500 hover:border-neutral-300 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-3xl shrink-0">
+                {restaurant.emoji}
+              </div>
+              <div>
+                <p className="font-black text-xl text-neutral-950">{restaurant.name}</p>
+                {restaurant.description && <p className="text-sm text-neutral-500 mt-1">{restaurant.description}</p>}
+                {restaurant.address && <p className="text-xs text-neutral-400 mt-1 font-medium">{restaurant.address}</p>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-xs font-bold text-neutral-600">{restaurant.price_range}</span>
+              <span className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-xs font-bold text-neutral-600">{restaurant.vibe}</span>
+              {restaurant.cuisine_types?.map(c => (
+                <span key={c} className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-xs font-bold text-neutral-600">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Menu */}
@@ -1278,11 +1449,11 @@ function UpgradeGating({ tier, message }: { tier: string; message: string }) {
       <div className="w-20 h-20 bg-rose-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-sm">
         <Lock className="text-[#ff385c]" size={32} />
       </div>
-      <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">Upgrade to {tier}</h3>
-      <p className="text-lg text-neutral-500 font-medium mb-10 max-w-sm mx-auto">{message}</p>
-      <button className="w-full py-5 rounded-full bg-neutral-950 text-white font-bold text-lg transition-all hover:bg-neutral-800 shadow-xl active:scale-95">
-        View Pricing
-      </button>
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-100 rounded-full mb-6">
+        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{tier} Feature</span>
+      </div>
+      <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-4">Coming soon</h3>
+      <p className="text-base text-neutral-500 font-medium max-w-sm mx-auto">{message}</p>
     </div>
   );
 }
