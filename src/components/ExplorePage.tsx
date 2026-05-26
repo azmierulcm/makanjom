@@ -43,17 +43,22 @@ export default function ExplorePage() {
   const [showSort, setShowSort] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchRestaurants = async (searchTerm: string, cuisineFilter: string) => {
+  const fetchRestaurants = async (searchTerm: string, cuisineFilter: string, priceFilter: string, sortKey: SortKey) => {
     setLoading(true);
     try {
       let query = supabase
         .from('restaurants')
         .select('*')
-        .eq('is_active', true)
-        .order('rating', { ascending: false });
+        .eq('is_active', true);
 
       if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
       if (cuisineFilter !== 'All') query = query.contains('cuisine_types', [cuisineFilter]);
+      if (priceFilter !== 'Any') query = query.eq('price_range', priceFilter);
+
+      // Server-side sort
+      if (sortKey === 'rating') query = query.order('rating', { ascending: false });
+      else if (sortKey === 'newest') query = query.order('created_at', { ascending: false });
+      else if (sortKey === 'az') query = query.order('name', { ascending: true });
 
       const { data, error } = await query;
 
@@ -61,7 +66,8 @@ export default function ExplorePage() {
         const mock = MOCK_RESTAURANTS.filter((r) => {
           const matchSearch = !searchTerm || r.name.toLowerCase().includes(searchTerm.toLowerCase());
           const matchCuisine = cuisineFilter === 'All' || r.cuisine_types?.some((c) => c.toLowerCase().includes(cuisineFilter.toLowerCase()));
-          return matchSearch && matchCuisine;
+          const matchPrice = priceFilter === 'Any' || r.price_range === priceFilter;
+          return matchSearch && matchCuisine && matchPrice;
         });
         setRestaurants(mock);
       } else {
@@ -76,29 +82,21 @@ export default function ExplorePage() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchRestaurants(search, cuisine), search ? 300 : 0);
+    debounceRef.current = setTimeout(
+      () => fetchRestaurants(search, cuisine, price, sort),
+      search ? 300 : 0
+    );
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, cuisine]);
+  }, [search, cuisine, price, sort]);
 
+  // Only open-now filtering remains client-side (time-based logic)
   const filtered = useMemo(() => {
-    let result = [...restaurants];
+    if (!openNow) return restaurants;
+    return restaurants.filter((r) => !r.business_hours || isRestaurantOpenNow(r));
+  }, [restaurants, openNow]);
 
-    // Price filter
-    if (price !== 'Any') result = result.filter((r) => r.price_range === price);
-
-    // Open now
-    if (openNow) result = result.filter((r) => !r.business_hours || isRestaurantOpenNow(r));
-
-    // Sort
-    if (sort === 'rating') result.sort((a, b) => b.rating - a.rating);
-    else if (sort === 'newest') result.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
-    else if (sort === 'az') result.sort((a, b) => a.name.localeCompare(b.name));
-
-    return result;
-  }, [restaurants, price, openNow, sort]);
-
-  const activeFilterCount = [openNow, price !== 'Any', cuisine !== 'All'].filter(Boolean).length;
+  const activeFilterCount = [openNow, price !== 'Any', cuisine !== 'All', sort !== 'rating'].filter(Boolean).length;
 
   const clearAll = () => { setCuisine('All'); setPrice('Any'); setOpenNow(false); };
 

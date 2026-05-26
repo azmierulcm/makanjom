@@ -6,7 +6,8 @@ import { MapPin, Sparkles, Utensils, Star, Shuffle, Clock3, Loader2, Heart, X, C
 import { supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/sounds';
 import { MOCK_RESTAURANTS } from '@/lib/mock-data';
-import { recordSpin, toggleSavedRestaurant, getGamificationState } from '@/lib/gamification';
+import { recordSpin, toggleSavedRestaurant, getGamificationState, syncFromDb } from '@/lib/gamification';
+import { checkRateLimit, formatResetTime } from '@/lib/rateLimit';
 import { haptics } from '@/lib/haptics';
 import { getCuisineLabel } from '@/components/RestaurantCard';
 import Link from 'next/link';
@@ -146,6 +147,11 @@ export default function MakanjomSpinner() {
     const state = getGamificationState();
     setSavedIds(state.savedRestaurants);
     setStreak(state.spinStreak ?? 0);
+    // Sync authoritative points/badges from DB (cross-device support)
+    syncFromDb().then(() => {
+      const synced = getGamificationState();
+      setStreak(synced.spinStreak ?? 0);
+    });
   }, []);
 
   // Derive unique cuisines from loaded restaurants
@@ -172,6 +178,15 @@ export default function MakanjomSpinner() {
 
   function spin() {
     if (spinning || pool.length === 0) return;
+
+    // Rate limit: 10 spins per minute
+    const rl = checkRateLimit('spinner', 10, 60_000);
+    if (!rl.allowed) {
+      setError(`Too many spins! Take a breather and try again in ${formatResetTime(rl.resetInMs)}.`);
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
     haptics.medium();
     setSpinning(true);
     sounds?.play('start', 0.5);

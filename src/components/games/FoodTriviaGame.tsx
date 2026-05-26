@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Trophy, Gamepad2 } from 'lucide-react';
 import { recordGamePlayed } from '@/lib/gamification';
 import { sounds } from '@/lib/sounds';
+import { checkRateLimit, formatResetTime } from '@/lib/rateLimit';
 
 const TRIVIA = [
   { q: 'What is the national dish often called Malaysia\'s breakfast?', options: ['Nasi Lemak', 'Roti Canai', 'Laksa', 'Char Kuey Teow'], answer: 0 },
@@ -20,6 +21,7 @@ export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (p
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [rateLimitMsg, setRateLimitMsg] = useState<string | null>(null);
 
   const question = TRIVIA[current];
 
@@ -62,8 +64,18 @@ export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (p
         <p className="mt-2 text-neutral-600">
           You scored {finalScore}/{TRIVIA.length}. Earned {finalScore * 20} points!
         </p>
+        {rateLimitMsg && (
+          <p className="mt-4 text-sm font-medium text-orange-600">{rateLimitMsg}</p>
+        )}
         <button
           onClick={() => {
+            // Rate limit: 5 game sessions per 10 minutes
+            const rl = checkRateLimit('trivia', 5, 10 * 60_000);
+            if (!rl.allowed) {
+              setRateLimitMsg(`Too many games! Try again in ${formatResetTime(rl.resetInMs)}.`);
+              return;
+            }
+            setRateLimitMsg(null);
             setCurrent(0);
             setScore(0);
             setSelected(null);

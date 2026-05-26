@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { Star, Send, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { recordReview } from '@/lib/gamification';
+import { sanitizeText } from '@/lib/sanitize';
+import { checkRateLimit, formatResetTime } from '@/lib/rateLimit';
 
 interface ReviewFormProps {
   restaurantId: string;
@@ -20,9 +22,21 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
   const [submitted, setSubmitted] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
 
+  const COMMENT_MAX = 1000;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) return;
+
+    // Rate limit: 3 reviews per hour per browser
+    const rl = checkRateLimit('review', 3, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      alert(`You've posted too many reviews recently. Try again in ${formatResetTime(rl.resetInMs)}.`);
+      return;
+    }
+
+    const sanitizedComment = sanitizeText(comment);
+    if (sanitizedComment.length > COMMENT_MAX) return;
 
     setSubmitting(true);
     try {
@@ -31,7 +45,7 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
       const { error: reviewError } = await supabase.from('reviews').insert({
         restaurant_id: restaurantId,
         rating,
-        comment: comment || null,
+        comment: sanitizedComment || null,
         customer_id: userId,
       });
 
@@ -95,12 +109,18 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
         ))}
       </div>
 
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="What did you love? Any recommendations?"
-        className="mb-6 h-32 w-full rounded-2xl border-2 border-neutral-100 bg-neutral-50 p-4 font-medium text-neutral-700 transition-colors placeholder:text-neutral-400 focus:border-[#ff385c]/40 focus:outline-none"
-      />
+      <div className="mb-6">
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          maxLength={1000}
+          placeholder="What did you love? Any recommendations?"
+          className="h-32 w-full rounded-2xl border-2 border-neutral-100 bg-neutral-50 p-4 font-medium text-neutral-700 transition-colors placeholder:text-neutral-400 focus:border-[#ff385c]/40 focus:outline-none"
+        />
+        <p className={`mt-1 text-right text-xs font-medium ${comment.length > 900 ? 'text-orange-500' : 'text-neutral-400'}`}>
+          {comment.length}/1000
+        </p>
+      </div>
 
       <button
         type="submit"

@@ -69,6 +69,43 @@ async function syncToDb(state: GamificationState) {
     .eq('id', user.id);
 }
 
+function mergeBadges(local: Badge[], remote: Badge[]): Badge[] {
+  const merged = [...local];
+  for (const rb of remote) {
+    if (!merged.some((lb) => lb.id === rb.id)) merged.push(rb);
+  }
+  return merged;
+}
+
+/**
+ * Pull the authoritative points + badges from the DB and merge them into
+ * localStorage. Call once on app mount when a user is signed in.
+ * DB always wins on points (highest value wins), badges are unioned.
+ */
+export async function syncFromDb(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('gamification_points, badges')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) return;
+
+  const local = getGamificationState();
+  const merged: GamificationState = {
+    ...local,
+    points: Math.max(local.points, profile.gamification_points ?? 0),
+    badges: mergeBadges(local.badges, (profile.badges as Badge[]) ?? []),
+  };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  }
+}
+
 function unlockBadge(state: GamificationState, badgeId: string): GamificationState {
   if (state.badges.some((b) => b.id === badgeId)) return state;
   const badge = DEFAULT_BADGES.find((b) => b.id === badgeId);
@@ -122,6 +159,19 @@ export function recordSpin(restaurantId: string, restaurantName: string, craving
   state = unlockBadge(state, 'first-spin');
   if (state.spinHistory.length >= 10) state = unlockBadge(state, 'spin-master');
   saveState(state);
+
+  // Persist spin to DB (fire-and-forget)
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (!user) return;
+    supabase.from('spin_history').insert({
+      id: record.id,
+      user_id: user.id,
+      restaurant_id: record.restaurant_id,
+      craving,
+      created_at: record.created_at,
+    }).then(() => {/* ignore errors — localStorage is source of truth */});
+  });
+
   return state;
 }
 

@@ -18,6 +18,8 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { sanitizeText } from '@/lib/sanitize';
+import type { User } from '@supabase/supabase-js';
 
 interface Article {
   id: string;
@@ -32,9 +34,9 @@ export default function AdminCMS() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ title: '', content: '', type: 'news' as const });
+  const [formData, setFormData] = useState<{ title: string; content: string; type: Article['type'] }>({ title: '', content: '', type: 'news' });
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -67,7 +69,17 @@ export default function AdminCMS() {
   }, []);
 
   const handleSave = async () => {
-    const { error } = await supabase.from('articles').insert([{ ...formData, author_id: user?.id }]);
+    const title = sanitizeText(formData.title);
+    const content = sanitizeText(formData.content);
+    if (!title || title.length > 200) return;
+    if (!content || content.length > 10000) return;
+
+    const { error } = await supabase.from('articles').insert([{
+      ...formData,
+      title,
+      content,
+      author_id: user?.id,
+    }]);
     if (!error) {
       setIsEditing(false);
       fetchArticles();
@@ -191,7 +203,7 @@ export default function AdminCMS() {
                             {['news', 'trend', 'training_event'].map(type => (
                                 <button 
                                     key={type}
-                                    onClick={() => setFormData({...formData, type: type as any})}
+                                    onClick={() => setFormData({...formData, type: type as Article['type']})}
                                     className={`px-5 py-2 rounded-full text-[10px] font-black uppercase border-2 transition-all ${formData.type === type ? 'bg-neutral-900 border-neutral-900 text-white shadow-lg' : 'border-neutral-100 text-neutral-300'}`}
                                 >
                                     {type.replace('_', ' ')}

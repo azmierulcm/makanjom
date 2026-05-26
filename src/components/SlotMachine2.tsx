@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect, type ComponentType } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -32,13 +32,24 @@ function classNames(...items: (string | boolean | undefined)[]) {
   return items.filter(Boolean).join(" ");
 }
 
+interface PlayOptions {
+  frequency?: number;
+  duration?: number;
+  type?: OscillatorType;
+  gain?: number;
+  start?: number;
+  slideTo?: number;
+  gap?: number;
+}
+
 function useSlotSounds() {
   const audioRef = useRef<AudioContext | null>(null);
 
   const getAudio = () => {
     if (typeof window === "undefined") return null;
     if (!audioRef.current) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioContextClass = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       audioRef.current = new AudioContextClass();
     }
     return audioRef.current;
@@ -119,7 +130,7 @@ function useSlotSounds() {
     source.stop(audio.currentTime + start + duration);
   };
 
-  const playChord = (notes: number[], options: any = {}) => {
+  const playChord = (notes: number[], options: PlayOptions = {}) => {
     notes.forEach((note) => {
       playTone({
         frequency: note,
@@ -132,7 +143,7 @@ function useSlotSounds() {
     });
   };
 
-  const playArp = (notes: number[], options: any = {}) => {
+  const playArp = (notes: number[], options: PlayOptions = {}) => {
     notes.forEach((note, index) => {
       playTone({
         frequency: note,
@@ -214,7 +225,7 @@ function Reel({ label, items, value, spinning, delay = 0 }: { label: string, ite
   );
 }
 
-function MiniStat({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) {
+function MiniStat({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>, label: string, value: string | number }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white/80 p-3 shadow-sm backdrop-blur">
       <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500">
