@@ -6,21 +6,23 @@
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
-  _role user_role := 'customer';
-  _raw_role TEXT;
+  _role TEXT;        -- TEXT in DECLARE so we never fail before BEGIN
+  _full_name TEXT;
 BEGIN
-  -- Safely extract the role string; default to 'customer' on any failure
-  _raw_role := NEW.raw_user_meta_data->>'role';
-  IF _raw_role IN ('customer', 'vendor', 'admin', 'creator') THEN
-    _role := _raw_role::user_role;
+  -- Validate role; default to 'customer' for anything unexpected
+  _role := NEW.raw_user_meta_data->>'role';
+  IF _role IS NULL OR _role NOT IN ('customer', 'vendor', 'admin', 'creator') THEN
+    _role := 'customer';
   END IF;
+  _full_name := COALESCE(
+    NEW.raw_user_meta_data->>'full_name',
+    split_part(NEW.email, '@', 1)
+  );
 
+  -- Cast to user_role inside BEGIN so the EXCEPTION block can catch it
+  -- if the type or table doesn't exist yet
   INSERT INTO public.profiles (id, role, full_name)
-  VALUES (
-    NEW.id,
-    _role,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
-  )
+  VALUES (NEW.id, _role::user_role, _full_name)
   ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
