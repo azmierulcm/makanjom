@@ -110,13 +110,20 @@ export default function CreatorDashboard() {
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
         window.location.href = '/login?redirect=/creator';
         return;
       }
       setUserId(user.id);
       setAuthLoading(false);
+
+      // Ensure profile role is 'creator' — fixes accounts created while trigger was broken
+      await supabase.from('profiles').upsert(
+        { id: user.id, role: 'creator' },
+        { onConflict: 'id' }
+      );
+
       loadData(user.id);
     });
   }, []);
@@ -351,14 +358,16 @@ export default function CreatorDashboard() {
 
 // ─── Profile Tab ──────────────────────────────────────────────────────────────
 
+type ProfileForm = { full_name: string; username: string; avatar_url: string; bio: string };
+
 function ProfileTab({
   form, setForm,
   areas, areaInput, setAreaInput, onAddArea, onRemoveArea,
   cuisines, cuisineInput, setCuisineInput, onAddCuisine, onRemoveCuisine,
   onSave, saving, error, success, isLocalExpert,
 }: {
-  form: { full_name: string; username: string; avatar_url: string; bio: string };
-  setForm: (f: any) => void;
+  form: ProfileForm;
+  setForm: React.Dispatch<React.SetStateAction<ProfileForm>>;
   areas: string[]; areaInput: string; setAreaInput: (v: string) => void;
   onAddArea: () => void; onRemoveArea: (a: string) => void;
   cuisines: string[]; cuisineInput: string; setCuisineInput: (v: string) => void;
@@ -378,13 +387,13 @@ function ProfileTab({
       {/* Identity */}
       <Card title="Identity" icon={<User size={15} />}>
         <Field label="Full Name" icon={<User size={14} />} value={form.full_name} placeholder="Your display name"
-          onChange={v => setForm((f: any) => ({ ...f, full_name: v }))} />
+          onChange={v => setForm(f => ({ ...f, full_name: v }))} />
         <Field label="Username" icon={<AtSign size={14} />} value={form.username} placeholder="e.g. foodlover99"
           hint="Lowercase letters, numbers, underscores only."
-          onChange={v => setForm((f: any) => ({ ...f, username: v }))} />
+          onChange={v => setForm(f => ({ ...f, username: v }))} />
         <Field label="Avatar URL" icon={<ImageIcon size={14} />} value={form.avatar_url} placeholder="https://..."
           hint="Paste a direct image link."
-          onChange={v => setForm((f: any) => ({ ...f, avatar_url: v }))} />
+          onChange={v => setForm(f => ({ ...f, avatar_url: v }))} />
       </Card>
 
       {/* Bio */}
@@ -393,7 +402,7 @@ function ProfileTab({
           <span className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">About you</span>
           <textarea
             value={form.bio}
-            onChange={e => setForm((f: any) => ({ ...f, bio: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
             rows={4}
             maxLength={300}
             placeholder="Tell the community about your food journey…"
@@ -456,14 +465,16 @@ function ProfileTab({
 
 // ─── Content Tab ──────────────────────────────────────────────────────────────
 
+type ArticleForm = { title: string; content: string; type: ArticleType };
+
 function ContentTab({
   articles, loading, composing, setComposing, form, setForm,
   onPublish, saving, error, onDelete,
 }: {
   articles: Article[]; loading: boolean;
   composing: boolean; setComposing: (v: boolean) => void;
-  form: { title: string; content: string; type: ArticleType };
-  setForm: (f: any) => void;
+  form: ArticleForm;
+  setForm: React.Dispatch<React.SetStateAction<ArticleForm>>;
   onPublish: () => void; saving: boolean; error: string | null;
   onDelete: (id: string) => void;
 }) {
@@ -485,7 +496,7 @@ function ContentTab({
                 <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">Title</label>
                 <input
                   value={form.title}
-                  onChange={e => setForm((f: any) => ({ ...f, title: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   maxLength={200}
                   placeholder="Your article headline…"
                   className="w-full rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-3 text-sm font-bold text-neutral-900 outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
@@ -496,7 +507,7 @@ function ContentTab({
                 <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">Type</label>
                 <div className="flex gap-2">
                   {(['trend', 'news', 'training_event'] as ArticleType[]).map(t => (
-                    <button key={t} onClick={() => setForm((f: any) => ({ ...f, type: t }))}
+                    <button key={t} onClick={() => setForm(f => ({ ...f, type: t }))}
                       className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
                         form.type === t ? TYPE_COLORS[t] : 'border-neutral-100 bg-neutral-50 text-neutral-400'
                       }`}>
@@ -510,7 +521,7 @@ function ContentTab({
                 <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">Content</label>
                 <textarea
                   value={form.content}
-                  onChange={e => setForm((f: any) => ({ ...f, content: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
                   rows={6}
                   maxLength={5000}
                   placeholder="Share your food knowledge with the community…"

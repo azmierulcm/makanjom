@@ -79,18 +79,29 @@ CREATE POLICY "Vendors update order status" ON orders
     EXISTS (SELECT 1 FROM restaurants WHERE id = orders.restaurant_id AND vendor_id = auth.uid())
   );
 
--- ─── Articles: admins and creators can post ───────────────────────────────────
+-- ─── Articles: any authenticated user can post ───────────────────────────────
 
 DROP POLICY IF EXISTS "Authors insert articles" ON articles;
 CREATE POLICY "Authors insert articles" ON articles
-  FOR INSERT WITH CHECK (
-    author_id = auth.uid() AND
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'creator'))
-  );
+  FOR INSERT WITH CHECK (author_id = auth.uid());
 
 DROP POLICY IF EXISTS "Authors update own articles" ON articles;
 CREATE POLICY "Authors update own articles" ON articles
   FOR UPDATE USING (author_id = auth.uid());
+
+DROP POLICY IF EXISTS "Authors delete own articles" ON articles;
+CREATE POLICY "Authors delete own articles" ON articles
+  FOR DELETE USING (author_id = auth.uid());
+
+-- ─── Creator profiles: creators manage their own row ─────────────────────────
+
+DROP POLICY IF EXISTS "Creators insert own profile" ON creator_profiles;
+CREATE POLICY "Creators insert own profile" ON creator_profiles
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+DROP POLICY IF EXISTS "Creators update own profile" ON creator_profiles;
+CREATE POLICY "Creators update own profile" ON creator_profiles
+  FOR UPDATE USING (profile_id = auth.uid());
 
 -- ─── Spin history: users log their own spins ─────────────────────────────────
 
