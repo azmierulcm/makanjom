@@ -5,17 +5,28 @@
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  _role user_role := 'customer';
+  _raw_role TEXT;
 BEGIN
+  -- Safely extract the role string; default to 'customer' on any failure
+  _raw_role := NEW.raw_user_meta_data->>'role';
+  IF _raw_role IN ('customer', 'vendor', 'admin', 'creator') THEN
+    _role := _raw_role::user_role;
+  END IF;
+
   INSERT INTO public.profiles (id, role, full_name)
   VALUES (
     NEW.id,
-    COALESCE(
-      (NEW.raw_user_meta_data->>'role')::user_role,
-      'customer'
-    ),
+    _role,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
   )
   ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Never block auth signup due to profile creation errors
+  RAISE WARNING 'handle_new_user failed for user %: %', NEW.id, SQLERRM;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
