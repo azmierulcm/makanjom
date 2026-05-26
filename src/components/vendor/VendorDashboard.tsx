@@ -225,16 +225,11 @@ export default function VendorDashboard() {
   );
 
   if (!restaurant) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#faf9f7] px-6 text-center">
-      <div className="max-w-md">
-        <div className="w-20 h-20 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mx-auto mb-6">
-          <Store size={32} className="text-[#ff385c]" />
-        </div>
-        <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-4">No Restaurant Found</h2>
-        <p className="text-neutral-500 mb-8">Your account is not linked to a restaurant. Contact support to set up your venue.</p>
-        <button onClick={handleSignOut} className="px-8 py-3 bg-neutral-900 text-white rounded-full font-bold text-sm">Sign Out</button>
-      </div>
-    </div>
+    <VendorOnboarding
+      userId={user.id}
+      onCreated={() => fetchRestaurantAndData(user.id)}
+      onSignOut={handleSignOut}
+    />
   );
 
   const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
@@ -343,6 +338,171 @@ export default function VendorDashboard() {
           )}
         </AnimatePresence>
       </main>
+    </div>
+  );
+}
+
+// ─── Vendor Onboarding ────────────────────────────────────────────────────────
+
+const CUISINE_OPTIONS = [
+  'Malaysian', 'Chinese', 'Indian', 'Western', 'Japanese',
+  'Korean', 'Thai', 'Italian', 'Middle Eastern', 'Fusion',
+];
+
+const EMOJI_OPTIONS = ['🍽️','🍜','🍛','🍣','🥩','🍔','🌮','🥗','🍕','🧆','🫕','🍱'];
+
+function VendorOnboarding({
+  userId,
+  onCreated,
+  onSignOut,
+}: {
+  userId: string;
+  onCreated: () => void;
+  onSignOut: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [emoji, setEmoji] = useState('🍽️');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggleCuisine = (c: string) =>
+    setSelectedCuisines((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
+    );
+
+  const handleCreate = async () => {
+    if (!name.trim()) { setError('Please enter your restaurant name.'); return; }
+    setSaving(true);
+    setError(null);
+    const { error: dbError } = await supabase.from('restaurants').insert({
+      vendor_id: userId,
+      name: name.trim(),
+      description: description.trim() || null,
+      cuisine_types: selectedCuisines,
+      emoji,
+      tier: 'free',
+    });
+    if (dbError) {
+      setError(dbError.message);
+      setSaving(false);
+    } else {
+      onCreated();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center px-6 py-16">
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mx-auto mb-6 text-4xl">
+            {emoji}
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-neutral-200 rounded-full shadow-sm mb-4">
+            <Store size={12} className="text-[#ff385c]" />
+            <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">New Venue</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950">Set up your restaurant</h1>
+          <p className="mt-2 text-neutral-500 text-sm">Tell us about your venue — you can edit everything later.</p>
+        </div>
+
+        <div className="bg-white rounded-[3rem] border border-neutral-100 shadow-sm p-8 space-y-6">
+          {/* Name */}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">
+              Restaurant Name *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Warung Mak Jom"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-5 py-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 px-1">
+              Short Description
+            </label>
+            <textarea
+              placeholder="What makes your restaurant special?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="w-full px-5 py-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-medium outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all resize-none"
+            />
+          </div>
+
+          {/* Emoji */}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-3 px-1">
+              Restaurant Emoji
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {EMOJI_OPTIONS.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmoji(e)}
+                  className={`w-11 h-11 rounded-2xl text-xl flex items-center justify-center border-2 transition-all ${
+                    emoji === e
+                      ? 'border-[#ff385c] bg-rose-50 shadow-sm'
+                      : 'border-neutral-100 bg-neutral-50 hover:border-neutral-200'
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cuisine types */}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-3 px-1">
+              Cuisine Types
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CUISINE_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => toggleCuisine(c)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold border-2 transition-all ${
+                    selectedCuisines.includes(c)
+                      ? 'border-neutral-900 bg-neutral-900 text-white'
+                      : 'border-neutral-100 bg-neutral-50 text-neutral-500 hover:border-neutral-200'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <p className="px-4 py-3 rounded-2xl bg-red-50 border border-red-100 text-xs font-bold text-red-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            onClick={handleCreate}
+            disabled={saving || !name.trim()}
+            className="w-full py-5 bg-[#ff385c] text-white rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-[#ff385c]/20 hover:bg-[#e93252] transition-all disabled:opacity-50 active:scale-95"
+          >
+            {saving ? 'Creating your venue…' : 'Create Restaurant →'}
+          </button>
+        </div>
+
+        <button
+          onClick={onSignOut}
+          className="mt-6 w-full text-center text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors uppercase tracking-widest"
+        >
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
