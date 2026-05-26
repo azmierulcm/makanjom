@@ -17,15 +17,33 @@ function LoginForm() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const redirectPath = searchParams.get('redirect') || '/profile';
+    const redirectParam = searchParams.get('redirect');
+
+    const getRoleDashboard = (role: string) => {
+        const map: Record<string, string> = {
+            admin: '/admin',
+            vendor: '/vendor',
+            creator: '/creator',
+            customer: '/profile',
+        };
+        return map[role] ?? '/profile';
+    };
 
     useEffect(() => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) router.push(redirectPath);
+            if (session) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+                const role = profile?.role ?? session.user.user_metadata?.role ?? 'customer';
+                router.push(getRoleDashboard(role));
+            }
         };
         checkSession();
-    }, [router, redirectPath]);
+    }, [router]);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,7 +54,16 @@ function LoginForm() {
             if (mode === 'signin') {
                 const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
                 if (signInError) throw signInError;
-                router.push(redirectPath);
+                const { data: { user: authedUser } } = await supabase.auth.getUser();
+                if (authedUser) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', authedUser.id)
+                        .single();
+                    const role = profile?.role ?? authedUser.user_metadata?.role ?? 'customer';
+                    router.push(redirectParam ?? getRoleDashboard(role));
+                }
             } else {
                 const { data, error: signUpError } = await supabase.auth.signUp({
                     email,
@@ -46,8 +73,12 @@ function LoginForm() {
                     }
                 });
                 if (signUpError) throw signUpError;
-                if (data.user) {
-                    setError("Success! Please check your email for a confirmation link.");
+                if (data.session) {
+                    // Email confirmation disabled — session created immediately, redirect to dashboard
+                    router.push(getRoleDashboard(role));
+                } else if (data.user) {
+                    // Email confirmation required
+                    setError("Account created! Check your email to verify, then sign in.");
                 }
             }
         } catch (err: any) {
@@ -105,16 +136,27 @@ function LoginForm() {
 
                 <form onSubmit={handleAuth} className="space-y-4">
                     {mode === 'signup' && (
-                        <div className="grid grid-cols-3 gap-2 mb-6">
-                            {(['customer', 'vendor', 'creator'] as const).map((r) => (
+                        <div className="space-y-2 mb-6">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 text-left mb-3">I am a…</p>
+                            {([
+                                { value: 'customer', icon: <User size={18} />, label: 'Food Explorer', desc: 'Discover restaurants, spin for picks, earn badges' },
+                                { value: 'vendor',   icon: <Store size={18} />, label: 'Restaurant Owner', desc: 'Manage your listing, orders & reservations' },
+                                { value: 'creator',  icon: <ChefHat size={18} />, label: 'Content Creator', desc: 'Build your food brand and publish reviews' },
+                            ] as const).map((r) => (
                                 <button
-                                    key={r}
+                                    key={r.value}
                                     type="button"
-                                    onClick={() => setRole(r)}
-                                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${role === r ? 'border-[#ff385c] bg-rose-50 text-[#ff385c]' : 'border-neutral-50 bg-neutral-50 text-neutral-400 hover:border-neutral-100'}`}
+                                    onClick={() => setRole(r.value)}
+                                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${role === r.value ? 'border-[#ff385c] bg-rose-50' : 'border-neutral-100 bg-neutral-50 hover:border-neutral-200'}`}
                                 >
-                                    {r === 'customer' ? <User size={18} /> : r === 'vendor' ? <Store size={18} /> : <ChefHat size={18} />}
-                                    <span className="text-[9px] font-black uppercase tracking-widest">{r}</span>
+                                    <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${role === r.value ? 'bg-[#ff385c] text-white' : 'bg-white text-neutral-400'}`}>
+                                        {r.icon}
+                                    </div>
+                                    <div>
+                                        <p className={`text-xs font-black uppercase tracking-widest ${role === r.value ? 'text-[#ff385c]' : 'text-neutral-700'}`}>{r.label}</p>
+                                        <p className="text-[10px] font-medium text-neutral-400 mt-0.5">{r.desc}</p>
+                                    </div>
+                                    <div className={`ml-auto shrink-0 w-4 h-4 rounded-full border-2 transition-all ${role === r.value ? 'border-[#ff385c] bg-[#ff385c]' : 'border-neutral-200'}`} />
                                 </button>
                             ))}
                         </div>

@@ -185,12 +185,12 @@ export default function GamesPage() {
           </button>
         ) : null}
 
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium shadow-sm">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm">
           <Gamepad2 className="h-4 w-4 text-[#ff385c]" />
           Mini-games
         </div>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-4xl font-bold tracking-tight text-neutral-950">
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">
             {activeGame && activeGameMeta ? activeGameMeta.title : 'Play & earn points'}
           </h1>
           <div className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-sm font-black text-white shrink-0">

@@ -148,7 +148,7 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-32 md:bg-[#faf9f7]">
+    <div className="min-h-screen pb-32">
       {/* Profile Header */}
       <section className="border-b border-neutral-100 bg-white px-6 py-10 md:rounded-b-[4rem] md:py-14 md:shadow-sm">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 md:flex-row md:gap-10">

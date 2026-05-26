@@ -166,7 +166,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
 
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl">{restaurant.name}</h1>
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">{restaurant.name}</h1>
           {images.length > 0 && (
             <p className="mt-1 text-sm font-medium text-neutral-500">{images.length} photo{images.length !== 1 ? 's' : ''}</p>
           )}

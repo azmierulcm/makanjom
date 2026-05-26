@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, CheckCircle2, AlertCircle, ChefHat } from 'lucide-react';
+import { Clock, CheckCircle2, ChefHat } from 'lucide-react';
 
 interface Order {
   id: string;
   customer_id: string;
-  status: 'pending' | 'preparing' | 'ready' | 'completed';
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
   items: { name: string; quantity: number; price: number }[];
   created_at: string;
 }
@@ -18,57 +18,74 @@ export const dynamic = 'force-dynamic';
 export default function OrderQueue() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setOrders(data as Order[]);
-    }
-    setLoading(false);
-  };
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOrders();
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = '/login?redirect=/vendor/orders';
+        return;
+      }
 
-    // Subscribe to real-time changes
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('vendor_id', user.id)
+        .limit(1)
+        .single();
+
+      if (!restaurant) {
+        setLoading(false);
+        return;
+      }
+
+      setRestaurantId(restaurant.id);
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('restaurant_id', restaurant.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) setOrders(data as Order[]);
+      setLoading(false);
+    };
+
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+
     const channel = supabase
-      .channel('vendor-orders')
+      .channel(`vendor-orders-queue-${restaurantId}`)
       .on(
-        'postgres_changes' as 'system',
-        { event: '*', schema: 'public', table: 'orders' } as Record<string, string>,
-        (payload: { eventType: string; new: Order; old: Order }) => {
-          console.log('Change received!', payload);
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
+        (payload) => {
           if (payload.eventType === 'INSERT') {
             setOrders((prev) => [payload.new as Order, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             setOrders((prev) =>
-              prev.map((o) => (o.id === payload.new.id ? (payload.new as Order) : o))
+              prev.map((o) => (o.id === (payload.new as Order).id ? (payload.new as Order) : o))
             );
           } else if (payload.eventType === 'DELETE') {
-            setOrders((prev) => prev.filter((o) => o.id !== payload.old.id));
+            setOrders((prev) => prev.filter((o) => o.id !== (payload.old as { id: string }).id));
           }
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    return () => { supabase.removeChannel(channel); };
+  }, [restaurantId]);
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
       .eq('id', orderId);
-
-    if (error) {
-      alert('Error updating status: ' + error.message);
-    }
+    if (error) alert('Error updating status: ' + error.message);
   };
 
   const getStatusColor = (status: string) => {
@@ -76,12 +93,26 @@ export default function OrderQueue() {
       case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'preparing': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'ready': return 'bg-green-100 text-green-700 border-green-200';
+      case 'completed': return 'bg-gray-100 text-gray-500 border-gray-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!restaurantId) return (
+    <div className="min-h-screen flex items-center justify-center text-gray-500">
+      No restaurant linked to this account.
+    </div>
+  );
+
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex justify-between items-end mb-8">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Live Order Queue</h2>
@@ -90,59 +121,56 @@ export default function OrderQueue() {
         <div className="flex gap-4">
           <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm font-bold text-gray-700">Live Connection</span>
+            <span className="text-sm font-bold text-gray-700">Live</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Pending Column */}
+        {/* Pending */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4 px-2">
             <Clock size={18} className="text-orange-500" />
             <h3 className="font-bold text-gray-700 uppercase tracking-wider text-sm">New Orders</h3>
             <span className="ml-auto bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              {orders.filter(o => o.status === 'pending').length}
+              {orders.filter((o) => o.status === 'pending').length}
             </span>
           </div>
-          
           <AnimatePresence mode="popLayout">
-            {orders.filter(o => o.status === 'pending').map((order) => (
-              <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
+            {orders.filter((o) => o.status === 'pending').map((order) => (
+              <OrderCard key={order.id} order={order} onUpdate={updateStatus} getStatusColor={getStatusColor} />
             ))}
           </AnimatePresence>
         </div>
 
-        {/* Preparing Column */}
+        {/* Preparing */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4 px-2">
             <ChefHat size={18} className="text-blue-500" />
             <h3 className="font-bold text-gray-700 uppercase tracking-wider text-sm">Preparing</h3>
             <span className="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              {orders.filter(o => o.status === 'preparing').length}
+              {orders.filter((o) => o.status === 'preparing').length}
             </span>
           </div>
-          
           <AnimatePresence mode="popLayout">
-            {orders.filter(o => o.status === 'preparing').map((order) => (
-              <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
+            {orders.filter((o) => o.status === 'preparing').map((order) => (
+              <OrderCard key={order.id} order={order} onUpdate={updateStatus} getStatusColor={getStatusColor} />
             ))}
           </AnimatePresence>
         </div>
 
-        {/* Ready Column */}
+        {/* Ready */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4 px-2">
             <CheckCircle2 size={18} className="text-green-500" />
             <h3 className="font-bold text-gray-700 uppercase tracking-wider text-sm">Ready for Pickup</h3>
             <span className="ml-auto bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              {orders.filter(o => o.status === 'ready').length}
+              {orders.filter((o) => o.status === 'ready').length}
             </span>
           </div>
-          
           <AnimatePresence mode="popLayout">
-            {orders.filter(o => o.status === 'ready').map((order) => (
-              <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
+            {orders.filter((o) => o.status === 'ready').map((order) => (
+              <OrderCard key={order.id} order={order} onUpdate={updateStatus} getStatusColor={getStatusColor} />
             ))}
           </AnimatePresence>
         </div>
@@ -151,7 +179,15 @@ export default function OrderQueue() {
   );
 }
 
-function OrderCard({ order, onUpdate }: { order: Order, onUpdate: (id: string, status: string) => void }) {
+function OrderCard({
+  order,
+  onUpdate,
+  getStatusColor,
+}: {
+  order: Order;
+  onUpdate: (id: string, status: string) => void;
+  getStatusColor: (status: string) => string;
+}) {
   return (
     <motion.div
       layout
@@ -207,7 +243,7 @@ function OrderCard({ order, onUpdate }: { order: Order, onUpdate: (id: string, s
           onClick={() => onUpdate(order.id, 'cancelled')}
           className="px-3 bg-red-50 text-red-500 py-2 rounded-xl text-xs font-black hover:bg-red-100 transition-colors"
         >
-          X
+          ✕
         </button>
       </div>
     </motion.div>

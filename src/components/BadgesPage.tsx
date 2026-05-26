@@ -126,7 +126,11 @@ export default function BadgesPage() {
 
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight text-neutral-950">Achievement gallery</h1>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-[#ff385c]" />
+            Achievements
+          </div>
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">Achievement gallery</h1>
           <p className="mt-2 text-neutral-600">
             Collect badges by spinning, reviewing, exploring, and playing mini-games.
           </p>

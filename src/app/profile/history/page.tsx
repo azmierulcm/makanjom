@@ -40,7 +40,7 @@ export default function SpinHistoryPage() {
             <Shuffle className="h-3.5 w-3.5 text-[#ff385c]" />
             Spin history
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-950">
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">
             Your spin history
           </h1>
           <p className="mt-2 text-neutral-500">Every restaurant fate has chosen for you.</p>

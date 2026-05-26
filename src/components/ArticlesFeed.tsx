@@ -222,7 +222,7 @@ export default function ArticlesFeed() {
           <Sparkles className="h-3.5 w-3.5 text-[#ff385c]" />
           Malaysia food scene
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-neutral-950">Food feed</h1>
+        <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">Food feed</h1>
         <p className="mt-2 text-neutral-600">Trends, news, and events from across Malaysia.</p>
       </header>
 

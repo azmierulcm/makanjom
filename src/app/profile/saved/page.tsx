@@ -62,7 +62,7 @@ export default function SavedPage() {
             <Heart className="h-3.5 w-3.5 text-[#ff385c]" />
             Saved
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-950">
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">
             Saved destinations
           </h1>
           <p className="mt-2 text-neutral-500">Restaurants you&apos;ve bookmarked for later.</p>
