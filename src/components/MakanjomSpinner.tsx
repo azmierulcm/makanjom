@@ -35,6 +35,9 @@ function pickRandomIndex(length: number) {
   return Math.floor(Math.random() * length);
 }
 
+// Row height in px — all three slots are this tall so the stack is exactly ROW_H×3.
+const ROW_H = 72;
+
 function WinnerReel({ items, selectedIndex, spinning }: { items: string[]; selectedIndex: number; spinning: boolean }) {
   const visibleItems = useMemo(() => {
     if (items.length === 0) return ["...", "...", "..."];
@@ -47,27 +50,58 @@ function WinnerReel({ items, selectedIndex, spinning }: { items: string[]; selec
 
   return (
     <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
-      {/* Selection highlight */}
-      <div className="absolute inset-x-6 top-1/2 h-16 -translate-y-1/2 rounded-2xl bg-neutral-950/[0.04]" />
+      {/* WINNER label */}
       <div className="border-b border-neutral-100 px-6 py-3 text-center">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-neutral-400">Winner</p>
       </div>
-      <div className="relative h-52 px-6 py-4">
+
+      {/* Reel body — height = exactly 3 rows, no padding so math stays clean */}
+      <div className="relative" style={{ height: ROW_H * 3 }}>
+
+        {/* Middle-row selection highlight — precise position, no top-1/2 guesswork */}
+        <div
+          className="absolute inset-x-5 rounded-2xl bg-neutral-950/[0.05]"
+          style={{ top: ROW_H, height: ROW_H }}
+        />
+
+        {/* Slot-machine gradient fades — top and bottom rows dissolve into white */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white to-transparent"
+          style={{ height: ROW_H * 0.85 }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white to-transparent"
+          style={{ height: ROW_H * 0.85 }}
+        />
+
+        {/* Animated strip — key on selectedIndex remounts per tick during spin */}
         <motion.div
-          key={`${selectedIndex}-${spinning}`}
-          initial={{ y: spinning ? -130 : -60, opacity: 0.7, filter: "blur(3px)" }}
-          animate={{ y: -60, opacity: 1, filter: "blur(0px)" }}
-          transition={{ type: "spring", stiffness: 85, damping: 14, mass: 0.8 }}
-          className="space-y-3"
+          key={selectedIndex}
+          initial={{
+            y: spinning ? -ROW_H : -ROW_H * 0.35,
+            opacity: 0.55,
+            filter: spinning ? "blur(6px)" : "blur(3px)",
+          }}
+          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+          transition={{
+            type: "spring",
+            stiffness: spinning ? 480 : 280,
+            damping: spinning ? 38 : 24,
+            mass: 0.85,
+          }}
         >
           {visibleItems.map((item, i) => (
             <div
-              key={`${item}-${i}`}
-              className={`flex h-16 items-center justify-center rounded-2xl px-4 text-center text-base font-bold transition-all ${
-                i === 1 ? "bg-white text-neutral-950 shadow-sm ring-1 ring-neutral-200" : "text-neutral-300"
+              key={i}
+              style={{ height: ROW_H }}
+              className={`flex items-center justify-center px-6 text-center ${
+                i === 1
+                  ? "font-black text-neutral-950 text-[1.05rem] leading-tight"
+                  : "font-semibold text-neutral-300 text-sm"
               }`}
             >
-              <span className="truncate">{item}</span>
+              {/* line-clamp-2 prevents long names from overflowing their row */}
+              <span className="line-clamp-2 leading-snug">{item}</span>
             </div>
           ))}
         </motion.div>
@@ -255,7 +289,7 @@ export default function MakanjomSpinner() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-safe-sticky-cta sm:px-6 lg:px-8 md:pb-8">
+    <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 lg:px-8 md:pb-8">
 
       {/* Page header */}
       <header className="flex flex-col gap-4 py-4 md:flex-row md:items-end md:justify-between md:gap-5 md:py-6">

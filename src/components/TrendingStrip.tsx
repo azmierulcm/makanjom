@@ -41,7 +41,7 @@ export default function TrendingStrip() {
   }, []);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-6xl px-4 pb-safe-sticky-cta sm:px-6 lg:px-8 md:pb-8">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-[#ff385c]" />

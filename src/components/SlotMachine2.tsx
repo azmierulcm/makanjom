@@ -48,7 +48,6 @@ function useSlotSounds() {
   const getAudio = () => {
     if (typeof window === "undefined") return null;
     if (!audioRef.current) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioContextClass = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       audioRef.current = new AudioContextClass();
     }

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export default function Home() {
   return (
     <AppShell>
-      <div className="py-8 sm:py-12">
+      <div className="pt-8 sm:pt-12">
         <ErrorBoundary>
           <MakanjomSpinner />
         </ErrorBoundary>
