@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Gamepad2, Zap, Brain, Grid3x3, ChevronRight, ArrowLeft, Trophy, Shuffle } from 'lucide-react';
+import { Gamepad2, Zap, Brain, Grid3x3, ChevronRight, ArrowLeft, Trophy, Shuffle, LogIn } from 'lucide-react';
 import FoodTriviaGame from '@/components/games/FoodTriviaGame';
 import MemoryMatchGame from '@/components/games/MemoryMatchGame';
 import { getGamificationState } from '@/lib/gamification';
+import { supabase } from '@/lib/supabase';
 
 type GameId = 'trivia' | 'memory';
 
@@ -90,11 +91,13 @@ function GameCard({ game, onSelect }: { game: typeof GAMES[number]; onSelect: ()
 function PostGameCard({
   game,
   pointsEarned,
+  isLoggedIn,
   onPlayAgain,
   onBack,
 }: {
   game: typeof GAMES[number];
   pointsEarned: number;
+  isLoggedIn: boolean;
   onPlayAgain: () => void;
   onBack: () => void;
 }) {
@@ -109,7 +112,19 @@ function PostGameCard({
         <Trophy className={`mx-auto h-12 w-12 ${game.accent}`} />
         <h3 className="mt-4 text-2xl font-black tracking-tight text-neutral-950">Great game!</h3>
         <p className={`mt-2 text-4xl font-black ${game.accent}`}>+{pointsEarned} pts</p>
-        <p className="mt-2 text-sm text-neutral-500">Added to your total</p>
+        {isLoggedIn ? (
+          <p className="mt-2 text-sm text-neutral-500">Added to your total</p>
+        ) : (
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <p className="text-sm text-neutral-500">Sign in to save your points</p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-xs font-bold text-white active:scale-95"
+            >
+              <LogIn className="h-3.5 w-3.5" /> Sign in to save
+            </Link>
+          </div>
+        )}
         <div className="mt-6 flex gap-3 justify-center">
           <button
             onClick={onPlayAgain}
@@ -150,17 +165,23 @@ function PostGameCard({
 
 export default function GamesPage() {
   const [points, setPoints] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
   const [lastPointsEarned, setLastPointsEarned] = useState<number | null>(null);
 
   useEffect(() => {
-    setPoints(getGamificationState().points);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setPoints(getGamificationState().points);
+      }
+    });
   }, []);
 
   const activeGameMeta = GAMES.find((g) => g.id === activeGame);
 
   const handlePointsEarned = (earned: number) => {
-    setPoints((p) => p + earned);
+    if (isLoggedIn) setPoints((p) => p + earned);
     setLastPointsEarned(earned);
   };
 
@@ -193,10 +214,19 @@ export default function GamesPage() {
           <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">
             {activeGame && activeGameMeta ? activeGameMeta.title : 'Play & earn points'}
           </h1>
-          <div className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-sm font-black text-white shrink-0">
-            <Zap className="h-4 w-4 fill-[#ff385c] text-[#ff385c]" />
-            {points} pts
-          </div>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-sm font-black text-white shrink-0">
+              <Zap className="h-4 w-4 fill-[#ff385c] text-[#ff385c]" />
+              {points} pts
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-600 shadow-sm hover:border-[#ff385c] hover:text-[#ff385c] transition-colors shrink-0"
+            >
+              <LogIn className="h-3.5 w-3.5" /> Sign in to earn pts
+            </Link>
+          )}
         </div>
         {!activeGame && (
           <p className="mt-2 text-neutral-600">
@@ -249,6 +279,7 @@ export default function GamesPage() {
             <PostGameCard
               game={activeGameMeta}
               pointsEarned={lastPointsEarned}
+              isLoggedIn={isLoggedIn}
               onPlayAgain={handlePlayAgain}
               onBack={() => { setActiveGame(null); setLastPointsEarned(null); }}
             />
@@ -259,9 +290,9 @@ export default function GamesPage() {
         {activeGame && lastPointsEarned === null && (
           <motion.div key={`game-${activeGame}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             {activeGame === 'trivia' ? (
-              <FoodTriviaGame onPointsEarned={handlePointsEarned} />
+              <FoodTriviaGame onPointsEarned={handlePointsEarned} isLoggedIn={isLoggedIn} />
             ) : (
-              <MemoryMatchGame onPointsEarned={handlePointsEarned} />
+              <MemoryMatchGame onPointsEarned={handlePointsEarned} isLoggedIn={isLoggedIn} />
             )}
           </motion.div>
         )}

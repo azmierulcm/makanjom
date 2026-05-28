@@ -8,7 +8,7 @@ import { sounds } from '@/lib/sounds';
 
 const PAIRS = ['🍛', '🍜', '🍣', '🍧', '🫓', '☕'];
 
-export default function MemoryMatchGame({ onPointsEarned }: { onPointsEarned?: (pts: number) => void }) {
+export default function MemoryMatchGame({ onPointsEarned, isLoggedIn = false }: { onPointsEarned?: (pts: number) => void; isLoggedIn?: boolean }) {
   const [cards, setCards] = useState<{ id: number; emoji: string; flipped: boolean; matched: boolean }[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [moves, setMoves] = useState(0);
@@ -39,7 +39,8 @@ export default function MemoryMatchGame({ onPointsEarned }: { onPointsEarned?: (
     setFlipped(newFlipped);
 
     if (newFlipped.length === 2) {
-      setMoves((m) => m + 1);
+      const newMoveCount = moves + 1;
+      setMoves(newMoveCount);
       const [a, b] = newFlipped;
       if (next[a].emoji === next[b].emoji) {
         next[a] = { ...next[a], matched: true };
@@ -48,8 +49,8 @@ export default function MemoryMatchGame({ onPointsEarned }: { onPointsEarned?: (
         setFlipped([]);
         sounds?.play('reveal', 0.3);
         if (next.every((c) => c.matched)) {
-          const pts = Math.max(30, 100 - moves * 5);
-          recordGamePlayed(pts);
+          const pts = Math.max(30, 100 - newMoveCount * 5);
+          if (isLoggedIn) recordGamePlayed(pts);
           onPointsEarned?.(pts);
           setWon(true);
         }

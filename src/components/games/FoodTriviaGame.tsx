@@ -15,7 +15,7 @@ const TRIVIA = [
   { q: 'What does "makan" mean in Malay?', options: ['Drink', 'Eat', 'Cook', 'Share'], answer: 1 },
 ];
 
-export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (pts: number) => void }) {
+export default function FoodTriviaGame({ onPointsEarned, isLoggedIn = false }: { onPointsEarned?: (pts: number) => void; isLoggedIn?: boolean }) {
   const [current, setCurrent] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -39,7 +39,7 @@ export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (p
         const finalScore = score + (correct ? 1 : 0);
         const perfect = finalScore === TRIVIA.length;
         const pts = finalScore * 20 + (perfect ? 50 : 0);
-        recordGamePlayed(pts, perfect);
+        if (isLoggedIn) recordGamePlayed(pts, perfect);
         onPointsEarned?.(pts);
         sounds?.play('reveal', 0.5);
         setFinished(true);
@@ -53,6 +53,8 @@ export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (p
 
   if (finished) {
     const finalScore = score;
+    const perfect = finalScore === TRIVIA.length;
+    const earnedPts = finalScore * 20 + (perfect ? 50 : 0);
     return (
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
@@ -62,7 +64,10 @@ export default function FoodTriviaGame({ onPointsEarned }: { onPointsEarned?: (p
         <Trophy className="mx-auto h-12 w-12 text-amber-500" />
         <h3 className="mt-4 text-2xl font-bold">Game over!</h3>
         <p className="mt-2 text-neutral-600">
-          You scored {finalScore}/{TRIVIA.length}. Earned {finalScore * 20} points!
+          You scored {finalScore}/{TRIVIA.length}.{' '}
+          {isLoggedIn
+            ? <>Earned <strong>{earnedPts} points</strong>{perfect ? ' (+ 50 perfect bonus! 🧠)' : ''}!</>
+            : <>You would earn <strong>{earnedPts} points</strong> — sign in to save them!</>}
         </p>
         {rateLimitMsg && (
           <p className="mt-4 text-sm font-medium text-orange-600">{rateLimitMsg}</p>
