@@ -55,6 +55,13 @@
   .scroll-snap-start {
     scroll-snap-align: start;
   }
+
+  /* Admin form inputs — consistent compact style */
+  .admin-input {
+    @apply w-full px-3 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-medium text-neutral-900 outline-none
+           placeholder:text-neutral-300
+           focus:border-neutral-400 focus:bg-white transition-all;
+  }
 }
 
 /* Custom Scrollbar for sidebars */
