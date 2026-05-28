@@ -43,7 +43,8 @@ function LoginForm() {
             }
         };
         checkSession();
-    }, [router]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount — router is stable in App Router
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,18 +53,26 @@ function LoginForm() {
 
         try {
             if (mode === 'signin') {
-                const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
                 if (signInError) throw signInError;
-                const { data: { user: authedUser } } = await supabase.auth.getUser();
-                if (authedUser) {
+
+                // Determine destination from profile role
+                let destination = redirectParam ?? '/profile';
+                if (data.user) {
                     const { data: profile } = await supabase
                         .from('profiles')
                         .select('role')
-                        .eq('id', authedUser.id)
+                        .eq('id', data.user.id)
                         .single();
-                    const role = profile?.role ?? authedUser.user_metadata?.role ?? 'customer';
-                    router.push(redirectParam ?? getRoleDashboard(role));
+                    const userRole = profile?.role ?? data.user.user_metadata?.role ?? 'customer';
+                    destination = redirectParam ?? getRoleDashboard(userRole);
                 }
+
+                // router.refresh() is required in Next.js App Router — without it the
+                // server-side middleware still sees the old (unauthenticated) cache and
+                // immediately redirects back to /login.
+                router.refresh();
+                router.push(destination);
             } else {
                 const { data, error: signUpError } = await supabase.auth.signUp({
                     email,
