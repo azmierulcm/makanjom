@@ -80,6 +80,7 @@ interface Restaurant {
   created_at: string;
   vendor_id: string;
   vendor_name?: string;
+  jomoda_slug: string | null;
 }
 
 interface RestaurantEditForm {
@@ -93,6 +94,7 @@ interface RestaurantEditForm {
   vibe: string;
   price_range: string;
   rating: string;
+  jomoda_slug: string;
 }
 
 interface UserProfile {
@@ -345,6 +347,7 @@ export default function AdminCMS() {
       vibe: r.vibe ?? '',
       price_range: r.price_range,
       rating: String(r.rating),
+      jomoda_slug: r.jomoda_slug ?? '',
     });
     setRestError(null);
   };
@@ -370,6 +373,7 @@ export default function AdminCMS() {
         vibe: sanitizeText(restForm.vibe) || 'Cozy',
         price_range: restForm.price_range,
         rating: Math.min(5, Math.max(0, parseFloat(restForm.rating) || 4.5)),
+        jomoda_slug: restForm.jomoda_slug.trim() || null,
       })
       .eq('id', editingRestaurant.id);
 
@@ -1155,6 +1159,20 @@ export default function AdminCMS() {
                     />
                   </FieldGroup>
                 </div>
+
+                <FieldGroup label="Jomoda Store Slug (optional)">
+                  <input
+                    type="text"
+                    value={restForm.jomoda_slug}
+                    onChange={(e) => setRestForm((f) => f && ({ ...f, jomoda_slug: e.target.value.trim().toLowerCase() }))}
+                    className="admin-input"
+                    placeholder="e.g. pelita-nasi-kandar"
+                  />
+                  {restForm.jomoda_slug
+                    ? <p className="mt-1 text-xs text-emerald-600 font-semibold">→ jomoda.my/{restForm.jomoda_slug}</p>
+                    : <p className="mt-1 text-xs text-neutral-400">Leave blank if this restaurant has no Jomoda store</p>
+                  }
+                </FieldGroup>
 
                 <div className="flex items-center gap-3 py-2">
                   <button

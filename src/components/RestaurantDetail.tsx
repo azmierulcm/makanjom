@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Star, Heart, Tag, Utensils, ChevronLeft, Sparkles, X, ChevronRight, Plus, Clock, Share2,
-  ChevronDown, HelpCircle,
+  ChevronDown, HelpCircle, ShoppingBag,
   Wifi, ParkingCircle, Baby, Music, Wind, Coffee, Tv, Accessibility, Dog,
 } from 'lucide-react';
 
@@ -249,15 +249,28 @@ export default function RestaurantDetail({ id }: { id: string }) {
                 </p>
               )}
             </div>
-            <button
-              onClick={handleSave}
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition ${
-                saved ? 'bg-[#ff385c] text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-              }`}
-            >
-              <Heart className={`h-4 w-4 ${saved ? 'fill-white' : ''}`} />
-              {saved ? 'Saved' : 'Save'}
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              {restaurant.jomoda_slug && (
+                <a
+                  href={`https://jomoda.my/${restaurant.jomoda_slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(16,185,129,0.3)] hover:bg-emerald-600 active:scale-95 transition"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Order Online
+                </a>
+              )}
+              <button
+                onClick={handleSave}
+                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition ${
+                  saved ? 'bg-[#ff385c] text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${saved ? 'fill-white' : ''}`} />
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            </div>
           </div>
 
           {restaurant.description && (
@@ -328,6 +341,30 @@ export default function RestaurantDetail({ id }: { id: string }) {
               </motion.div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Jomoda Order Online CTA */}
+      {restaurant.jomoda_slug && (
+        <section className="mt-6">
+          <a
+            href={`https://jomoda.my/${restaurant.jomoda_slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-between gap-4 rounded-[2rem] border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md active:scale-[0.99] sm:p-6"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
+                <ShoppingBag className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-emerald-600">Online ordering available</p>
+                <p className="mt-0.5 text-base font-bold text-neutral-950">Order from {restaurant.name}</p>
+                <p className="text-sm text-neutral-500">Menu, cart &amp; checkout — powered by Jomoda</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-emerald-400 transition group-hover:translate-x-0.5" />
+          </a>
         </section>
       )}
 
@@ -470,10 +507,8 @@ export default function RestaurantDetail({ id }: { id: string }) {
         )}
       </AnimatePresence>
 
-      {/* Sticky mobile bottom bar — Save / Share / Reserve */}
-      <div
-        className="fixed bottom-nav-offset left-0 right-0 z-60 border-t border-neutral-100 bg-white/95 px-4 py-3 backdrop-blur-xl md:hidden"
-      >
+      {/* Sticky mobile bottom bar */}
+      <div className="fixed bottom-nav-offset left-0 right-0 z-60 border-t border-neutral-100 bg-white/95 px-4 py-3 backdrop-blur-xl md:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           {/* Save */}
           <button
@@ -500,18 +535,29 @@ export default function RestaurantDetail({ id }: { id: string }) {
             <Share2 className="h-4 w-4" /> Share
           </button>
 
-          {/* Review */}
-          <button
-            onClick={() => {
-              setActiveTab('reviews');
-              setTimeout(() => {
-                document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 100);
-            }}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-3.5 text-sm font-bold text-white transition active:scale-95"
-          >
-            <Star className="h-4 w-4" /> Review
-          </button>
+          {/* Order Online (Jomoda) or Review */}
+          {restaurant.jomoda_slug ? (
+            <a
+              href={`https://jomoda.my/${restaurant.jomoda_slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-3.5 text-sm font-bold text-white shadow-sm transition active:scale-95"
+            >
+              <ShoppingBag className="h-4 w-4" /> Order
+            </a>
+          ) : (
+            <button
+              onClick={() => {
+                setActiveTab('reviews');
+                setTimeout(() => {
+                  document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+              }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-3.5 text-sm font-bold text-white transition active:scale-95"
+            >
+              <Star className="h-4 w-4" /> Review
+            </button>
+          )}
         </div>
       </div>
     </div>

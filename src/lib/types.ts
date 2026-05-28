@@ -47,6 +47,7 @@ export interface Restaurant {
   distance?: string;
   accent?: string;
   facilities?: Facility[];
+  jomoda_slug?: string | null;
 }
 
 export interface MenuItem {
