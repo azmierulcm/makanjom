@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, Star, ChevronRight } from 'lucide-react';
 import type { Restaurant } from '@/lib/types';
 
@@ -27,7 +28,7 @@ export default function RestaurantCard({ restaurant, index = 0 }: { restaurant: 
     >
       <div className={`relative h-44 bg-gradient-to-br ${accent} overflow-hidden`}>
         {image ? (
-          <img src={image} alt={restaurant.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+          <Image src={image} alt={restaurant.name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
         ) : (
           <div className="flex h-full items-center justify-center text-6xl">{restaurant.emoji}</div>
         )}

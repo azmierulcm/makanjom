@@ -2,6 +2,7 @@ import AppShell from '@/components/layout/AppShell';
 import MakanjomSpinner from '@/components/MakanjomSpinner';
 import TrendingStrip from '@/components/TrendingStrip';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import OnboardingModal from '@/components/OnboardingModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export default function Home() {
       <ErrorBoundary>
         <TrendingStrip />
       </ErrorBoundary>
+      <OnboardingModal />
     </AppShell>
   );
 }

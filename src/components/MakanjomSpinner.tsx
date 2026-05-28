@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Sparkles, Utensils, Star, Shuffle, Clock3, Loader2, Heart, X, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { MapPin, Sparkles, Utensils, Star, Shuffle, Loader2, Heart, X, ChevronRight, SlidersHorizontal, Share2 } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/sounds';
 import { MOCK_RESTAURANTS } from '@/lib/mock-data';
@@ -454,15 +454,7 @@ export default function MakanjomSpinner() {
                     </button>
                   </div>
 
-                  <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                    {winner.distance && (
-                      <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
-                        <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
-                          <Clock3 className="h-4 w-4" /> Distance
-                        </div>
-                        <p className="mt-2 text-xl font-semibold">{winner.distance}</p>
-                      </div>
-                    )}
+                  <div className="mt-8 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-neutral-200/70">
                       <div className="flex items-center gap-2 text-sm font-medium text-neutral-500">
                         <Star className="h-4 w-4" /> Rating
@@ -582,7 +574,7 @@ export default function MakanjomSpinner() {
                 >
                   View venue details <ChevronRight size={16} />
                 </Link>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={handleSaveWinner}
                     className={`flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition active:scale-95 ${
@@ -593,11 +585,26 @@ export default function MakanjomSpinner() {
                     {savedIds.includes(winner.id) ? 'Saved' : 'Save'}
                   </button>
                   <button
+                    onClick={async () => {
+                      const url = `${window.location.origin}/restaurants/${winner.id}`;
+                      const text = `Makanjom picked ${winner.name} for me — let fate choose your next meal! 🎰`;
+                      if (navigator.share) {
+                        await navigator.share({ title: winner.name, text, url }).catch(() => {});
+                      } else {
+                        await navigator.clipboard.writeText(`${text}\n${url}`);
+                      }
+                      haptics.light();
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-100 py-3.5 text-sm font-bold text-neutral-700 active:scale-95"
+                  >
+                    <Share2 size={16} /> Share
+                  </button>
+                  <button
                     onClick={() => { setShowSheet(false); spin(); }}
                     disabled={spinning}
                     className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-100 py-3.5 text-sm font-bold text-neutral-700 active:scale-95 disabled:opacity-50"
                   >
-                    <Shuffle size={16} /> Spin again
+                    <Shuffle size={16} /> Again
                   </button>
                 </div>
               </div>

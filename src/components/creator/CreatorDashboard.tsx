@@ -73,8 +73,8 @@ export default function CreatorDashboard() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
   const [composing, setComposing] = useState(false);
-  const [articleForm, setArticleForm] = useState<{ title: string; content: string; type: ArticleType }>({
-    title: '', content: '', type: 'trend',
+  const [articleForm, setArticleForm] = useState<{ title: string; content: string; type: ArticleType; event_date: string }>({
+    title: '', content: '', type: 'trend', event_date: '',
   });
   const [articleSaving, setArticleSaving] = useState(false);
   const [articleError, setArticleError] = useState<string | null>(null);
@@ -179,14 +179,14 @@ export default function CreatorDashboard() {
       title: articleForm.title.trim(),
       content: articleForm.content.trim(),
       type: articleForm.type,
-      event_date: null,
+      event_date: articleForm.type === 'training_event' && articleForm.event_date ? articleForm.event_date : null,
     });
 
     if (error) {
       setArticleError(error.message);
     } else {
       setComposing(false);
-      setArticleForm({ title: '', content: '', type: 'trend' });
+      setArticleForm({ title: '', content: '', type: 'trend', event_date: '' });
       if (userId) {
         const { data } = await supabase.from('articles').select('*').eq('author_id', userId).order('created_at', { ascending: false });
         if (data) setArticles(data as Article[]);
@@ -465,7 +465,7 @@ function ProfileTab({
 
 // ─── Content Tab ──────────────────────────────────────────────────────────────
 
-type ArticleForm = { title: string; content: string; type: ArticleType };
+type ArticleForm = { title: string; content: string; type: ArticleType; event_date: string };
 
 function ContentTab({
   articles, loading, composing, setComposing, form, setForm,
@@ -517,6 +517,19 @@ function ContentTab({
                 </div>
               </div>
 
+              {form.type === 'training_event' && (
+                <div>
+                  <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">Event Date</label>
+                  <input
+                    type="date"
+                    value={form.event_date}
+                    onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-3 text-sm font-bold text-neutral-900 outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">Content</label>
                 <textarea
@@ -541,7 +554,7 @@ function ContentTab({
                   className="flex flex-1 items-center justify-center gap-2 py-4 bg-[#ff385c] text-white rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-[#ff385c]/20 active:scale-95 transition-all hover:bg-[#e93252] disabled:opacity-40">
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <><Check size={14} /> Publish</>}
                 </button>
-                <button onClick={() => { setComposing(false); setForm({ title: '', content: '', type: 'trend' }); }}
+                <button onClick={() => { setComposing(false); setForm({ title: '', content: '', type: 'trend', event_date: '' }); }}
                   className="px-6 py-4 border border-neutral-200 rounded-full text-xs font-black uppercase tracking-widest text-neutral-500 hover:border-neutral-300 transition-all">
                   Cancel
                 </button>

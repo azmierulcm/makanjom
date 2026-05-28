@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Star, Send, CheckCircle2 } from 'lucide-react';
+import { Star, Send, CheckCircle2, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { recordReview } from '@/lib/gamification';
 import { sanitizeText } from '@/lib/sanitize';
 import { checkRateLimit, formatResetTime } from '@/lib/rateLimit';
+import Link from 'next/link';
 
 interface ReviewFormProps {
   restaurantId: string;
@@ -15,23 +16,34 @@ interface ReviewFormProps {
 }
 
 export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: ReviewFormProps) {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const COMMENT_MAX = 1000;
 
+  // Check auth once on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+      setAuthChecked(true);
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0) return;
+    if (rating === 0 || !userId) return;
 
     // Rate limit: 3 reviews per hour per browser
     const rl = checkRateLimit('review', 3, 60 * 60 * 1000);
     if (!rl.allowed) {
-      alert(`You've posted too many reviews recently. Try again in ${formatResetTime(rl.resetInMs)}.`);
+      setFormError(`Too many reviews recently. Try again in ${formatResetTime(rl.resetInMs)}.`);
       return;
     }
 
@@ -39,9 +51,8 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
     if (sanitizedComment.length > COMMENT_MAX) return;
 
     setSubmitting(true);
+    setFormError(null);
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id ?? null;
-
       const { error: reviewError } = await supabase.from('reviews').insert({
         restaurant_id: restaurantId,
         rating,
@@ -49,21 +60,44 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
         customer_id: userId,
       });
 
-      if (reviewError) {
-        console.warn('Review save failed, recording locally:', reviewError.message);
-      }
+      if (reviewError) throw reviewError;
 
+      // Only award local gamification points when the DB insert succeeded.
+      // The DB trigger also fires on insert — recordReview() keeps localStorage
+      // in sync so the UI updates immediately without waiting for a DB sync.
       recordReview();
       setPointsEarned(50);
       setSubmitted(true);
       onSuccess?.();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to submit review';
-      alert(message);
+      const message = err instanceof Error ? err.message : 'Failed to submit review. Please try again.';
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Auth gate — show sign-in prompt for unauthenticated users
+  if (authChecked && !userId) {
+    return (
+      <div className="w-full max-w-lg rounded-3xl border border-neutral-100 bg-white p-8 text-center shadow-xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-100">
+          <Star size={24} className="text-neutral-400" />
+        </div>
+        <h3 className="mb-2 text-xl font-black text-neutral-900">Sign in to leave a review</h3>
+        <p className="mb-6 text-sm font-medium text-neutral-500">
+          Help the community discover great food at <span className="text-neutral-700">{restaurantName}</span>.
+          Sign in to share your experience and earn points.
+        </p>
+        <Link
+          href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`}
+          className="inline-flex items-center gap-2 rounded-full bg-[#ff385c] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#ff385c]/20 hover:bg-[#e93252]"
+        >
+          <LogIn size={16} /> Sign in to review
+        </Link>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -121,6 +155,12 @@ export default function ReviewForm({ restaurantId, restaurantName, onSuccess }: 
           {comment.length}/1000
         </p>
       </div>
+
+      {formError && (
+        <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">
+          {formError}
+        </div>
+      )}
 
       <button
         type="submit"

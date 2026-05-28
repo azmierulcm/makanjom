@@ -180,15 +180,26 @@ function LoginForm() {
                         <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-[#ff385c] transition-colors">
                             <Lock size={18} />
                         </div>
-                        <input 
-                            type="password" 
+                        <input
+                            type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full pl-14 pr-6 py-4 bg-neutral-50 border border-neutral-100 rounded-[1.5rem] text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all" 
+                            className="w-full pl-14 pr-6 py-4 bg-neutral-50 border border-neutral-100 rounded-[1.5rem] text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
                             placeholder="Password"
                         />
                     </div>
+
+                    {mode === 'signin' && (
+                        <div className="flex justify-end -mt-1">
+                            <Link
+                                href="/auth/forgot-password"
+                                className="text-xs font-bold text-neutral-400 hover:text-[#ff385c] transition-colors"
+                            >
+                                Forgot password?
+                            </Link>
+                        </div>
+                    )}
 
                     {error && (
                         <div className={`p-4 rounded-2xl text-xs font-bold leading-relaxed border ${error.includes('Success') ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-red-50 border-red-100 text-red-600'}`}>

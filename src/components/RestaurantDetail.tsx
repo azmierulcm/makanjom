@@ -1,12 +1,22 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as Icons from 'lucide-react';
 import {
-  MapPin, Star, Heart, Tag, Utensils, ChevronLeft, Sparkles, X, ChevronRight, Plus, Clock, Share2, CalendarCheck,
+  MapPin, Star, Heart, Tag, Utensils, ChevronLeft, Sparkles, X, ChevronRight, Plus, Clock, Share2,
+  ChevronDown, HelpCircle,
+  Wifi, ParkingCircle, Baby, Music, Wind, Coffee, Tv, Accessibility, Dog,
 } from 'lucide-react';
+
+// Constrained icon map for facility icons stored in the DB.
+// Avoids bundling all 400+ lucide icons via `import * as Icons`.
+type LucideIconComponent = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+const FACILITY_ICON_MAP: Record<string, LucideIconComponent> = {
+  Wifi, ParkingCircle, Baby, Music, Wind,
+  Utensils, Coffee, Tv, Accessibility, Dog,
+};
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -183,33 +193,33 @@ export default function RestaurantDetail({ id }: { id: string }) {
         <div className="relative">
           {images.length === 5 ? (
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-4 sm:gap-2">
-              <div className="col-span-1 row-span-1 aspect-[4/3] sm:col-span-2 sm:row-span-2 sm:aspect-auto sm:h-[400px]">
-                <img src={images[0]} alt={restaurant.name} className="h-full w-full object-cover" />
+              <div className="relative col-span-1 row-span-1 aspect-[4/3] sm:col-span-2 sm:row-span-2 sm:aspect-auto sm:h-[400px]">
+                <Image src={images[0]} alt={restaurant.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" priority />
               </div>
               <div className="hidden grid-cols-2 grid-rows-2 gap-1 sm:col-span-2 sm:grid sm:gap-2">
                 {images.slice(1, 5).map((img, i) => (
-                  <div key={i} className="aspect-square h-[calc(200px-0.25rem)]">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  <div key={i} className="relative aspect-square h-[calc(200px-0.25rem)]">
+                    <Image src={img} alt="" fill className="object-cover" sizes="25vw" />
                   </div>
                 ))}
               </div>
               {/* Mobile fallback for other 4 images */}
               <div className="grid grid-cols-2 gap-1 sm:hidden">
                 {images.slice(1, 5).map((img, i) => (
-                  <div key={i} className="aspect-square">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  <div key={i} className="relative aspect-square">
+                    <Image src={img} alt="" fill className="object-cover" sizes="50vw" />
                   </div>
                 ))}
               </div>
             </div>
           ) : images.length > 0 ? (
             <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 sm:gap-2">
-              <div className="col-span-2 row-span-2 aspect-[4/3] sm:aspect-auto sm:h-72">
-                <img src={images[0]} alt={restaurant.name} className="h-full w-full object-cover" />
+              <div className="relative col-span-2 row-span-2 aspect-[4/3] sm:aspect-auto sm:h-72">
+                <Image src={images[0]} alt={restaurant.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" priority />
               </div>
               {images.slice(1, 3).map((img, i) => (
-                <div key={i} className="hidden aspect-square sm:block sm:h-[calc(9rem-0.25rem)]">
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                <div key={i} className="relative hidden aspect-square sm:block sm:h-[calc(9rem-0.25rem)]">
+                  <Image src={img} alt="" fill className="object-cover" sizes="25vw" />
                 </div>
               ))}
             </div>
@@ -271,7 +281,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
 
           <div className="grid grid-cols-2 gap-x-4 sm:gap-x-10">
             {restaurant.facilities.map((facility) => {
-              const Icon = (Icons[facility.icon as keyof typeof Icons] as Icons.LucideIcon) || Icons.HelpCircle;
+              const Icon = (FACILITY_ICON_MAP[facility.icon] ?? HelpCircle) as LucideIconComponent;
 
               return (
                 <article
@@ -359,7 +369,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
                           {items.length} items
                         </span>
                       </div>
-                      <Icons.ChevronDown
+                      <ChevronDown
                         className={`h-5 w-5 text-neutral-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                       />
                     </button>
@@ -428,7 +438,9 @@ export default function RestaurantDetail({ id }: { id: string }) {
                 ))
               )}
             </div>
-            <ReviewForm restaurantId={id} restaurantName={restaurant.name} onSuccess={fetchData} />
+            <div id="review-form">
+              <ReviewForm restaurantId={id} restaurantName={restaurant.name} onSuccess={fetchData} />
+            </div>
           </div>
         )}
 
@@ -486,12 +498,17 @@ export default function RestaurantDetail({ id }: { id: string }) {
             <Share2 className="h-4 w-4" /> Share
           </button>
 
-          {/* Reserve */}
+          {/* Review */}
           <button
-            onClick={() => setActiveTab('reviews')}
+            onClick={() => {
+              setActiveTab('reviews');
+              setTimeout(() => {
+                document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            }}
             className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-3.5 text-sm font-bold text-white transition active:scale-95"
           >
-            <CalendarCheck className="h-4 w-4" /> Reserve
+            <Star className="h-4 w-4" /> Review
           </button>
         </div>
       </div>

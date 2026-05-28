@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Gamepad2, Zap, Brain, Grid3x3, ChevronRight, ArrowLeft, Trophy } from 'lucide-react';
+import { Gamepad2, Zap, Brain, Grid3x3, ChevronRight, ArrowLeft, Trophy, Shuffle } from 'lucide-react';
 import FoodTriviaGame from '@/components/games/FoodTriviaGame';
 import MemoryMatchGame from '@/components/games/MemoryMatchGame';
 import { getGamificationState } from '@/lib/gamification';
@@ -218,6 +218,28 @@ export default function GamesPage() {
             {GAMES.map((game) => (
               <GameCard key={game.id} game={game} onSelect={() => { setActiveGame(game.id); setLastPointsEarned(null); }} />
             ))}
+
+            {/* SlotMachine2 — standalone page, links out */}
+            <Link
+              href="/games/slotmachine2"
+              className="group block rounded-[2rem] border border-neutral-200 bg-gradient-to-br from-rose-50 to-pink-50 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100">
+                  <Shuffle className="h-6 w-6 text-[#ff385c]" />
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-neutral-400 ring-1 ring-neutral-200">
+                  Bonus
+                </span>
+              </div>
+              <h3 className="text-lg font-black text-neutral-950">Slot Machine v2</h3>
+              <p className="mt-1 text-sm font-medium text-neutral-500">
+                An alternative spin experience — 3 reels, faster pace, same great restaurants.
+              </p>
+              <div className="mt-4 flex items-center gap-1 text-xs font-black text-[#ff385c]">
+                Play now <ChevronRight className="h-3.5 w-3.5" />
+              </div>
+            </Link>
           </motion.div>
         )}
 

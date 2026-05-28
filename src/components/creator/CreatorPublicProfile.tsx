@@ -1,27 +1,86 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import { MOCK_CREATORS, MOCK_ARTICLES } from '@/lib/mock-data';
-import { MapPin, Star, Users, Award, FileText } from 'lucide-react';
-import type { CreatorProfile } from '@/lib/types';
+import { MapPin, Star, Users, Award, FileText, Loader2 } from 'lucide-react';
+import type { CreatorProfile, Article } from '@/lib/types';
+
+type ArticleRow = Pick<Article, 'id' | 'title' | 'content' | 'type' | 'created_at'>;
 
 export default function CreatorPublicProfile({ username }: { username: string }) {
-  const creator = useMemo(
-    () => MOCK_CREATORS.find((c) => c.profiles?.username === username),
-    [username]
-  );
+  const [creator, setCreator] = useState<CreatorProfile | null>(null);
+  const [articles, setArticles] = useState<ArticleRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  const articles = useMemo(
-    () => MOCK_ARTICLES.filter((a) => a.profiles?.username === username),
-    [username]
-  );
+  useEffect(() => {
+    const fetchCreator = async () => {
+      setLoading(true);
+      try {
+        // 1. Resolve username → profile id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .maybeSingle();
 
-  if (!creator) {
+        if (profile?.id) {
+          // 2. Fetch creator profile + nested profile row
+          const { data: creatorData } = await supabase
+            .from('creator_profiles')
+            .select('*, profiles(*)')
+            .eq('profile_id', profile.id)
+            .maybeSingle();
+
+          // 3. Fetch their articles
+          const { data: articleData } = await supabase
+            .from('articles')
+            .select('id, title, content, type, created_at')
+            .eq('author_id', profile.id)
+            .order('created_at', { ascending: false });
+
+          if (creatorData) {
+            setCreator(creatorData as unknown as CreatorProfile);
+            setArticles((articleData ?? []) as ArticleRow[]);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to mock data
+      }
+
+      // Fallback: check mock data (covers seed creators during development)
+      const mockCreator = MOCK_CREATORS.find((c) => c.profiles?.username === username);
+      if (mockCreator) {
+        setCreator(mockCreator);
+        setArticles(MOCK_ARTICLES.filter((a) => a.profiles?.username === username));
+      } else {
+        setNotFound(true);
+      }
+    };
+
+    fetchCreator().finally(() => setLoading(false));
+  }, [username]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="animate-spin text-[#ff385c]" size={32} />
+      </div>
+    );
+  }
+
+  if (notFound || !creator) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold">Creator not found</h1>
-        <Link href="/creators" className="mt-4 inline-block font-semibold text-[#ff385c]">Browse creators</Link>
+        <p className="text-5xl mb-4">🍽️</p>
+        <h1 className="text-2xl font-bold text-neutral-950">Creator not found</h1>
+        <p className="mt-2 text-neutral-500 text-sm">This profile doesn&apos;t exist or has been removed.</p>
+        <Link href="/creators" className="mt-6 inline-block rounded-full bg-[#ff385c] px-6 py-3 text-sm font-bold text-white">
+          Browse creators
+        </Link>
       </div>
     );
   }

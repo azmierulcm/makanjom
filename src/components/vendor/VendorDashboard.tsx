@@ -3,12 +3,22 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as Icons from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import {
   ChevronRight, Package, Clock3, Store, LayoutGrid,
   Plus, Utensils, ChevronDown, ChevronUp, X, LogOut, Lock, Pencil, Check,
+  Wifi, ParkingCircle, Baby, Music, Wind, Coffee, Tv, Accessibility, Dog, Crown,
 } from 'lucide-react';
+import VendorUpgrade from '@/components/vendor/VendorUpgrade';
+import ImageUpload from '@/components/ImageUpload';
+
+// Explicit map of the amenity icons offered in the icon picker.
+// Using a constrained map instead of `import * as Icons` avoids bundling all 400+ lucide icons.
+type LucideIconComponent = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+const AMENITY_ICON_MAP: Record<string, LucideIconComponent> = {
+  Wifi, ParkingCircle, Baby, Music, Wind,
+  Utensils, Coffee, Tv, Accessibility, Dog,
+};
 import { normalizeMenuItem } from '@/lib/menus';
 import type { MenuItem, Facility } from '@/lib/types';
 
@@ -48,6 +58,7 @@ interface EditForm {
   price: string;
   description: string;
   is_available: boolean;
+  image_url: string;
 }
 
 interface AddItemForm {
@@ -93,7 +104,7 @@ export default function VendorDashboard() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [activeTab, setActiveTab] = useState<'orders' | 'bookings' | 'listing'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'bookings' | 'listing' | 'upgrade'>('orders');
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -271,16 +282,17 @@ export default function VendorDashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto mt-4 md:mt-8">
-        <div className="flex gap-2 p-1.5 bg-neutral-200/50 rounded-full mb-10 w-fit overflow-x-auto">
-          {(['orders', 'bookings', 'listing'] as const).map((tab) => (
+        <div className="flex gap-2 p-1.5 bg-neutral-200/50 rounded-full mb-10 w-fit overflow-x-auto scrollbar-hide">
+          {(['orders', 'bookings', 'listing', 'upgrade'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
+              className={`px-5 md:px-8 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === tab ? 'bg-white shadow-md text-neutral-950' : 'text-neutral-500 hover:text-neutral-700'
               }`}
             >
-              {tab === 'listing' ? 'Store Front' : tab === 'bookings' ? 'Reservations' : 'Orders'}
+              {tab === 'upgrade' && <Crown size={13} className={activeTab === tab ? 'text-[#ff385c]' : 'text-neutral-400'} />}
+              {tab === 'listing' ? 'Store Front' : tab === 'bookings' ? 'Reservations' : tab === 'upgrade' ? 'Upgrade' : 'Orders'}
             </button>
           ))}
         </div>
@@ -322,7 +334,7 @@ export default function VendorDashboard() {
                 <div className="col-span-full"><EmptyState message="No reservations booked yet." /></div>
               )}
             </motion.section>
-          ) : (
+          ) : activeTab === 'listing' ? (
             <motion.section
               key="listing"
               initial={{ opacity: 0, y: 15 }}
@@ -332,6 +344,19 @@ export default function VendorDashboard() {
               <ListingManager
                 restaurant={restaurant}
                 onRestaurantUpdate={() => fetchRestaurantAndData(user.id)}
+              />
+            </motion.section>
+          ) : (
+            <motion.section
+              key="upgrade"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <VendorUpgrade
+                currentTier={restaurant.tier}
+                restaurant={{ name: restaurant.name }}
+                user={user}
               />
             </motion.section>
           )}
@@ -736,7 +761,7 @@ function ListingManager({
 
   // Edit item modal
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', price: '', description: '', is_available: true });
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', price: '', description: '', is_available: true, image_url: '' });
   const [savingEdit, setSavingEdit] = useState(false);
 
   // Add item modal
@@ -813,6 +838,7 @@ function ListingManager({
       price: String(item.price),
       description: item.description ?? '',
       is_available: item.is_available,
+      image_url: item.image_url ?? '',
     });
     setEditingItem(item);
   };
@@ -832,6 +858,7 @@ function ListingManager({
         price,
         description: editForm.description.trim() || null,
         is_available: editForm.is_available,
+        image_url: editForm.image_url || null,
       })
       .eq('id', editingItem.id)
       .select()
@@ -923,8 +950,6 @@ function ListingManager({
     setShowAddCategory(false);
     setNewCategoryName('');
   };
-
-  type LucideIcon = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 
   return (
     <div className="space-y-10">
@@ -1186,7 +1211,7 @@ function ListingManager({
         </div>
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           {facilities.map((f) => {
-            const Icon = ((Icons as unknown as Record<string, LucideIcon>)[f.icon] ?? Utensils) as LucideIcon;
+            const Icon = (AMENITY_ICON_MAP[f.icon] ?? Utensils) as LucideIconComponent;
             return (
               <div key={f.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl bg-neutral-50 border border-neutral-100 group">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1246,6 +1271,16 @@ function ListingManager({
                   onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                   rows={2}
                   className="w-full px-5 py-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-medium outline-none focus:border-[#ff385c]/30 transition-all resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 block px-2">Photo</label>
+                <ImageUpload
+                  compact
+                  value={editForm.image_url}
+                  onChange={(url) => setEditForm((f) => ({ ...f, image_url: url }))}
+                  folder="menu-items"
+                  label="Upload item photo"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1408,7 +1443,7 @@ function ListingManager({
                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 block px-2">Icon</label>
                   <div className="grid grid-cols-5 gap-2">
                     {AMENITY_ICONS.map((iconName) => {
-                      const Icon = ((Icons as unknown as Record<string, LucideIcon>)[iconName] ?? Utensils) as LucideIcon;
+                      const Icon = (AMENITY_ICON_MAP[iconName] ?? Utensils) as LucideIconComponent;
                       return (
                         <button
                           key={iconName}

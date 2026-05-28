@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Star, TrendingUp, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -75,10 +76,12 @@ export default function TrendingStrip() {
                   {/* Image or emoji */}
                   <div className="relative h-28 overflow-hidden">
                     {r.images?.[0] ? (
-                      <img
+                      <Image
                         src={r.images[0]}
                         alt={r.name}
-                        className="h-full w-full object-cover transition group-hover:scale-105"
+                        fill
+                        className="object-cover transition group-hover:scale-105"
+                        sizes="(max-width: 640px) 176px, 208px"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-5xl">
