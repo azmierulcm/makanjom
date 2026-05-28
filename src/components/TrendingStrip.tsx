@@ -56,7 +56,7 @@ export default function TrendingStrip() {
         </Link>
       </div>
 
-      <div className="-mx-4 flex gap-4 overflow-x-auto scroll-touch scroll-snap-x px-4 pb-3 sm:mx-0 sm:px-0">
+      <div className="-mx-4 flex min-h-[176px] gap-4 overflow-x-auto scroll-touch scroll-snap-x px-4 pb-3 sm:mx-0 sm:px-0">
         {loading
           ? [1, 2, 3, 4].map((i) => (
               <div key={i} className="scroll-snap-start h-44 w-44 shrink-0 animate-pulse rounded-[2rem] bg-neutral-200 sm:w-52" />
@@ -64,8 +64,8 @@ export default function TrendingStrip() {
           : restaurants.map((r, i) => (
               <motion.div
                 key={r.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.06 }}
                 className="scroll-snap-start shrink-0 w-44 sm:w-52"
               >

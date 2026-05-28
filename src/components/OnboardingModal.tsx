@@ -98,6 +98,7 @@ export default function OnboardingModal() {
             {/* Dismiss */}
             <button
               onClick={dismiss}
+              aria-label="Close"
               className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
             >
               <X size={14} />

@@ -98,7 +98,7 @@ function LoginForm() {
     };
 
     return (
-        <div className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <main className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center p-6 relative overflow-hidden">
             {/* Background Accents */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
                 <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-rose-100/40 rounded-full blur-[120px]" />
@@ -123,13 +123,13 @@ function LoginForm() {
                     <div className="flex gap-2 p-1 bg-neutral-100 rounded-full mb-8">
                         <button 
                             onClick={() => setMode('signin')}
-                            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'signin' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'signin' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                         >
                             Sign In
                         </button>
-                        <button 
+                        <button
                             onClick={() => setMode('signup')}
-                            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'signup' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${mode === 'signup' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                         >
                             Register
                         </button>
@@ -240,7 +240,7 @@ function LoginForm() {
             <p className="mt-8 text-neutral-400 text-xs font-medium max-w-xs text-center leading-relaxed">
                 By continuing, you agree to Makanjom&apos;s Terms of Service and Privacy Policy.
             </p>
-        </div>
+        </main>
     );
 }
 

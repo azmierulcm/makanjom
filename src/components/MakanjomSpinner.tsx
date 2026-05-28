@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Sparkles, Utensils, Star, Shuffle, Loader2, Heart, X, ChevronRight, SlidersHorizontal, Share2 } from "lucide-react";
+import { MapPin, Sparkles, Utensils, Star, Shuffle, Heart, X, ChevronRight, SlidersHorizontal, Share2 } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/sounds';
 import { MOCK_RESTAURANTS } from '@/lib/mock-data';
@@ -268,25 +268,7 @@ export default function MakanjomSpinner() {
     filterPrice !== "Any price",
   ].filter(Boolean).length;
 
-  if (loading && restaurants.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-20 w-full gap-4">
-        <Loader2 className="animate-spin text-[#ff385c]" size={40} />
-        <p className="text-neutral-400 font-medium">Loading restaurants...</p>
-      </div>
-    );
-  }
-
-  if (error || (restaurants.length === 0 && !loading)) {
-    return (
-      <div className="p-10 bg-white rounded-[2.5rem] border border-neutral-200 text-center max-w-lg mx-auto shadow-sm">
-        <Utensils className="mx-auto mb-4 text-neutral-300" size={48} />
-        <h3 className="text-xl font-bold mb-2">No restaurants found</h3>
-        <p className="text-neutral-500 mb-6">{error || 'Your pool is empty.'}</p>
-        <button onClick={fetchRestaurants} className="px-6 py-2 bg-[#ff385c] text-white rounded-full font-semibold">Try Again</button>
-      </div>
-    );
-  }
+  const isBootstrapping = loading && restaurants.length === 0;
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 lg:px-8 md:pb-8">
@@ -314,7 +296,7 @@ export default function MakanjomSpinner() {
         </div>
         <button
           onClick={spin}
-          disabled={spinning || pool.length === 0}
+          disabled={isBootstrapping || spinning || pool.length === 0}
           className="group hidden min-h-11 items-center justify-center gap-3 rounded-full bg-[#ff385c] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_45px_rgba(255,56,92,0.25)] transition hover:-translate-y-0.5 hover:bg-[#e93252] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 md:inline-flex"
         >
           <Shuffle className={`h-5 w-5 ${spinning ? "animate-spin" : "transition group-hover:rotate-12"}`} />
@@ -326,11 +308,11 @@ export default function MakanjomSpinner() {
       <div className="fixed bottom-nav-offset left-0 right-0 z-40 border-t border-neutral-100 bg-[#faf9f7]/95 px-4 py-3 backdrop-blur-lg md:hidden">
         <button
           onClick={spin}
-          disabled={spinning || pool.length === 0}
+          disabled={isBootstrapping || spinning || pool.length === 0}
           className="flex w-full min-h-12 items-center justify-center gap-3 rounded-2xl bg-[#ff385c] text-base font-bold text-white shadow-[0_12px_32px_rgba(255,56,92,0.35)] active:scale-[0.98] disabled:opacity-70"
         >
           <Shuffle className={`h-5 w-5 ${spinning ? 'animate-spin' : ''}`} />
-          {spinning ? 'Spinning...' : pool.length === 0 ? 'No matches — clear filters' : `Choose from ${pool.length} spots`}
+          {isBootstrapping ? 'Loading restaurants...' : spinning ? 'Spinning...' : pool.length === 0 ? 'No matches — clear filters' : `Choose from ${pool.length} spots`}
         </button>
       </div>
 
@@ -390,6 +372,21 @@ export default function MakanjomSpinner() {
 
         {/* Left: reel + result card */}
         <div className="flex flex-col gap-4">
+          {isBootstrapping ? (
+            /* Skeleton — same dimensions as real content, prevents CLS */
+            <>
+              <div className="rounded-[2.5rem] border border-neutral-200 bg-white/60 p-3 shadow-sm h-[284px] animate-pulse" />
+              <div className="rounded-[2.5rem] border border-neutral-200 bg-neutral-100 p-6 shadow-sm h-[320px] animate-pulse" />
+            </>
+          ) : error || (restaurants.length === 0 && !loading) ? (
+            <div className="p-10 bg-white rounded-[2.5rem] border border-neutral-200 text-center max-w-lg mx-auto shadow-sm">
+              <Utensils className="mx-auto mb-4 text-neutral-300" size={48} />
+              <h3 className="text-xl font-bold mb-2">No restaurants found</h3>
+              <p className="text-neutral-500 mb-6">{error || 'Your pool is empty.'}</p>
+              <button onClick={fetchRestaurants} className="px-6 py-2 bg-[#ff385c] text-white rounded-full font-semibold">Try Again</button>
+            </div>
+          ) : (
+          <>
           {/* Single winner reel */}
           <div className="rounded-[2.5rem] border border-neutral-200 bg-white/60 p-3 shadow-sm backdrop-blur sm:p-4">
             {pool.length === 0 ? (
@@ -407,7 +404,6 @@ export default function MakanjomSpinner() {
           {/* Result card */}
           {winner && (
             <motion.div
-              layout
               className={`relative overflow-hidden rounded-[2.5rem] border border-neutral-200 bg-gradient-to-br ${winner.accent} p-6 shadow-sm sm:p-8`}
             >
               <div className="absolute right-6 top-6 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-neutral-200/70">
@@ -472,6 +468,8 @@ export default function MakanjomSpinner() {
               </AnimatePresence>
             </motion.div>
           )}
+          </>
+          )}
         </div>
 
         {/* Right: restaurant pool */}
@@ -485,7 +483,11 @@ export default function MakanjomSpinner() {
           </div>
 
           <div className="mt-5 space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
-            {pool.length === 0 ? (
+            {isBootstrapping ? (
+              [1,2,3,4,5].map((i) => (
+                <div key={i} className="h-[72px] animate-pulse rounded-3xl bg-neutral-100" />
+              ))
+            ) : pool.length === 0 ? (
               <p className="py-6 text-center text-sm text-neutral-400">No restaurants match your filters.</p>
             ) : (
               pool.map((item, index) => {
@@ -541,6 +543,7 @@ export default function MakanjomSpinner() {
               </div>
               <button
                 onClick={() => setShowSheet(false)}
+                aria-label="Close"
                 className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500"
               >
                 <X size={16} />

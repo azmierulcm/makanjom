@@ -70,7 +70,7 @@ function GameCard({ game, onSelect }: { game: typeof GAMES[number]; onSelect: ()
         <ChevronRight className="mt-1 h-5 w-5 text-neutral-300" />
       </div>
 
-      <h3 className="mt-5 text-xl font-black tracking-tight text-neutral-950">{game.title}</h3>
+      <h2 className="mt-5 text-xl font-black tracking-tight text-neutral-950">{game.title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-neutral-600">{game.description}</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-neutral-500">
@@ -110,7 +110,7 @@ function PostGameCard({
       {/* Score summary */}
       <div className={`rounded-[2.5rem] border border-neutral-200 bg-gradient-to-br ${game.gradient} p-8 text-center shadow-sm`}>
         <Trophy className={`mx-auto h-12 w-12 ${game.accent}`} />
-        <h3 className="mt-4 text-2xl font-black tracking-tight text-neutral-950">Great game!</h3>
+        <h2 className="mt-4 text-2xl font-black tracking-tight text-neutral-950">Great game!</h2>
         <p className={`mt-2 text-4xl font-black ${game.accent}`}>+{pointsEarned} pts</p>
         {isLoggedIn ? (
           <p className="mt-2 text-sm text-neutral-500">Added to your total</p>
@@ -146,9 +146,9 @@ function PostGameCard({
         <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">
           You just played {game.title} — now eat!
         </p>
-        <h4 className="text-lg font-bold text-neutral-950">
+        <h3 className="text-lg font-bold text-neutral-950">
           Discover {game.relatedLabel} near you
-        </h4>
+        </h3>
         <p className="mt-1 text-sm text-neutral-500">
           Put that {game.id === 'trivia' ? 'knowledge' : 'memory'} to use and visit a spot in person.
         </p>
@@ -262,7 +262,7 @@ export default function GamesPage() {
                   Bonus
                 </span>
               </div>
-              <h3 className="text-lg font-black text-neutral-950">Slot Machine v2</h3>
+              <h2 className="text-lg font-black text-neutral-950">Slot Machine v2</h2>
               <p className="mt-1 text-sm font-medium text-neutral-500">
                 An alternative spin experience — 3 reels, faster pace, same great restaurants.
               </p>
