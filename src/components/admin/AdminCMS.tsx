@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -735,9 +736,9 @@ export default function AdminCMS() {
                             </Td>
                             <Td>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0">
+                                <div className="relative w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0">
                                   {u.avatar_url ? (
-                                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    <Image src={u.avatar_url} alt="" fill className="object-cover" />
                                   ) : (
                                     <UserCircle size={16} className="text-neutral-400" />
                                   )}
@@ -838,9 +839,9 @@ export default function AdminCMS() {
                             </span>
                           </Td>
                           <Td>
-                            <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center">
+                            <div className="relative w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center">
                               {a.cover_image_url ? (
-                                <img src={a.cover_image_url} alt="" className="w-full h-full object-cover" />
+                                <Image src={a.cover_image_url} alt="" fill className="object-cover" />
                               ) : (
                                 <Type size={14} className="text-neutral-300" />
                               )}

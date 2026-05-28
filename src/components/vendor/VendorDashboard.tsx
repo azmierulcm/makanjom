@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { User } from '@supabase/supabase-js';
@@ -1160,7 +1161,7 @@ function ListingManager({
                           <div className="flex items-center gap-3 md:gap-4 min-w-0">
                             <div className="w-10 h-10 md:w-12 md:h-12 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-300 shrink-0 overflow-hidden">
                               {item.image_url
-                                ? <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                                ? <Image src={item.image_url} alt={item.name} width={48} height={48} className="w-full h-full object-cover" />
                                 : <Utensils size={18} />}
                             </div>
                             <div className="min-w-0">

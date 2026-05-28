@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -155,9 +156,9 @@ export default function UserProfile() {
           {/* Avatar */}
           <div className="relative shrink-0">
             <div className="h-36 w-36 rounded-[3rem] bg-neutral-100 p-1.5 shadow-xl shadow-[#ff385c]/10 md:h-44 md:w-44">
-              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[2.7rem] bg-white">
+              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[2.7rem] bg-white">
                 {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                  <Image src={profile.avatar_url} alt="Avatar" fill className="object-cover" />
                 ) : (
                   <span className="text-5xl font-black text-neutral-200">{initials}</span>
                 )}

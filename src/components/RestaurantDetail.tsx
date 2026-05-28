@@ -396,7 +396,7 @@ export default function RestaurantDetail({ id }: { id: string }) {
                                 <div className="flex items-center gap-4">
                                   <p className="shrink-0 text-lg font-bold text-[#ff385c]">RM {item.price.toFixed(2)}</p>
                                   {item.image_url && (
-                                    <img src={item.image_url} alt="" className="h-16 w-16 rounded-xl object-cover" />
+                                    <Image src={item.image_url} alt={item.name} width={64} height={64} className="h-16 w-16 rounded-xl object-cover" />
                                   )}
                                 </div>
                               </button>
@@ -450,7 +450,9 @@ export default function RestaurantDetail({ id }: { id: string }) {
               <p className="col-span-full text-neutral-500">No photos uploaded yet.</p>
             ) : (
               images.map((img, i) => (
-                <img key={i} src={img} alt="" className="aspect-square rounded-2xl object-cover" />
+                <div key={i} className="relative aspect-square overflow-hidden rounded-2xl">
+                  <Image src={img} alt="" fill className="object-cover" />
+                </div>
               ))
             )}
           </div>

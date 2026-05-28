@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -246,9 +247,9 @@ export default function CreatorDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-[1.2rem] bg-gradient-to-br from-[#ff385c] to-orange-400 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-[#ff385c]/20 shrink-0">
+            <div className="relative w-14 h-14 rounded-[1.2rem] bg-gradient-to-br from-[#ff385c] to-orange-400 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-[#ff385c]/20 shrink-0 overflow-hidden">
               {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover rounded-[1.2rem]" />
+                ? <Image src={profile.avatar_url} alt="" fill className="object-cover rounded-[1.2rem]" />
                 : initials}
             </div>
             <div>
@@ -627,8 +628,8 @@ function PreviewTab({
         {/* Hero */}
         <div className="px-6 pt-8 pb-6 border-b border-neutral-50">
           <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-[1.8rem] bg-gradient-to-br from-[#ff385c] to-orange-400 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-[#ff385c]/20 shrink-0 overflow-hidden">
-              {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
+            <div className="relative w-20 h-20 rounded-[1.8rem] bg-gradient-to-br from-[#ff385c] to-orange-400 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-[#ff385c]/20 shrink-0 overflow-hidden">
+              {avatarUrl ? <Image src={avatarUrl} alt="" fill className="object-cover" /> : initials}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Sparkles, Utensils, Star, Shuffle, Loader2, Heart, X, ChevronRight, SlidersHorizontal, Share2 } from "lucide-react";
 import { supabase } from '@/lib/supabase';
@@ -145,14 +146,14 @@ export default function MakanjomSpinner() {
   const [winnerIdx, setWinnerIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
-  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>(() => getGamificationState().savedRestaurants);
 
   // Filters
   const [filterVibe, setFilterVibe] = useState("Any vibe");
   const [filterCuisine, setFilterCuisine] = useState("Any");
   const [filterPrice, setFilterPrice] = useState("Any price");
   const [showFilters, setShowFilters] = useState(false);
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState<number>(() => getGamificationState().spinStreak ?? 0);
 
   const fetchRestaurants = async () => {
     setLoading(true);
@@ -178,12 +179,11 @@ export default function MakanjomSpinner() {
 
   useEffect(() => {
     fetchRestaurants();
-    const state = getGamificationState();
-    setSavedIds(state.savedRestaurants);
-    setStreak(state.spinStreak ?? 0);
-    // Sync authoritative points/badges from DB (cross-device support)
+    // Sync authoritative data from DB (cross-device support).
+    // savedIds and streak are already seeded from localStorage via lazy useState.
     syncFromDb().then(() => {
       const synced = getGamificationState();
+      setSavedIds(synced.savedRestaurants);
       setStreak(synced.spinStreak ?? 0);
     });
   }, []);
@@ -548,7 +548,7 @@ export default function MakanjomSpinner() {
 
               <div className={`relative mx-4 mt-4 overflow-hidden rounded-[2rem] bg-gradient-to-br ${winner.accent} p-6`}>
                 {winner.images?.[0] && (
-                  <img src={winner.images[0]} alt={winner.name} className="absolute inset-0 h-full w-full object-cover opacity-25" />
+                  <Image src={winner.images[0]} alt={winner.name} fill className="object-cover opacity-25" />
                 )}
                 <p className="relative text-xs font-black uppercase tracking-[0.2em] text-neutral-500">🎰 Tonight&apos;s pick</p>
                 <div className="relative mt-3 flex items-center gap-3">

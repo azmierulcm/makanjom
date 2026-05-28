@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Award, Sparkles } from 'lucide-react';
 import { DEFAULT_BADGES, getGamificationState, getBadgeProgress } from '@/lib/gamification';
@@ -13,7 +13,26 @@ import type { BadgeProgress } from '@/lib/gamification';
 const CONFETTI_COLORS = ['#ff385c', '#ffb347', '#ffd700', '#4ade80', '#60a5fa', '#f472b6'];
 
 function ConfettiBurst({ onDone }: { onDone: () => void }) {
-  const pieces = Array.from({ length: 28 }, (_, i) => i);
+  // Random values computed once per mount — NOT in the render body.
+  // Calling Math.random() during render causes hydration mismatches and
+  // unstable re-renders on every state update.
+  const pieces = useMemo(() => {
+    const COUNT = 28;
+    return Array.from({ length: COUNT }, (_, i) => {
+      const angle = (i / COUNT) * 360;
+      const dist = 80 + Math.random() * 120;
+      return {
+        i,
+        dx: Math.cos((angle * Math.PI) / 180) * dist,
+        dy: Math.sin((angle * Math.PI) / 180) * dist - 60,
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        size: 6 + Math.random() * 8,
+        rotate: Math.random() * 360,
+        duration: 0.9 + Math.random() * 0.5,
+        isCircle: Math.random() > 0.5,
+      };
+    });
+  }, []); // stable — computed once when component mounts
 
   useEffect(() => {
     const t = setTimeout(onDone, 1400);
@@ -22,25 +41,15 @@ function ConfettiBurst({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[200] overflow-hidden">
-      {pieces.map((i) => {
-        const angle = (i / pieces.length) * 360;
-        const dist = 80 + Math.random() * 120;
-        const dx = Math.cos((angle * Math.PI) / 180) * dist;
-        const dy = Math.sin((angle * Math.PI) / 180) * dist - 60;
-        const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
-        const size = 6 + Math.random() * 8;
-        const rotate = Math.random() * 360;
-
-        return (
-          <motion.div
-            key={i}
-            initial={{ x: '50vw', y: '40vh', opacity: 1, scale: 1, rotate: 0 }}
-            animate={{ x: `calc(50vw + ${dx}px)`, y: `calc(40vh + ${dy}px)`, opacity: 0, scale: 0.4, rotate }}
-            transition={{ duration: 0.9 + Math.random() * 0.5, ease: 'easeOut' }}
-            style={{ width: size, height: size, borderRadius: Math.random() > 0.5 ? '50%' : '2px', background: color, position: 'absolute' }}
-          />
-        );
-      })}
+      {pieces.map(({ i, dx, dy, color, size, rotate, duration, isCircle }) => (
+        <motion.div
+          key={i}
+          initial={{ x: '50vw', y: '40vh', opacity: 1, scale: 1, rotate: 0 }}
+          animate={{ x: `calc(50vw + ${dx}px)`, y: `calc(40vh + ${dy}px)`, opacity: 0, scale: 0.4, rotate }}
+          transition={{ duration, ease: 'easeOut' }}
+          style={{ width: size, height: size, borderRadius: isCircle ? '50%' : '2px', background: color, position: 'absolute' }}
+        />
+      ))}
     </div>
   );
 }
