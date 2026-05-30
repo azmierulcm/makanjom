@@ -10,6 +10,10 @@ jobs:
   test:
     name: Type-check & Test
     runs-on: ubuntu-latest
+    env:
+      # Suppress Node.js 20 deprecation warnings from action runners.
+      # Remove once actions/checkout and actions/setup-node ship Node 24 builds.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -18,7 +22,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
