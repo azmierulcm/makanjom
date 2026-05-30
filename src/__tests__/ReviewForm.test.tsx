@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ReviewForm from '@/components/ReviewForm';
 import { checkRateLimit } from '@/lib/rateLimit';
 
@@ -55,24 +55,31 @@ describe('ReviewForm', () => {
     expect(screen.getByRole('button', { name: /post review/i })).not.toBeDisabled();
   });
 
-  it('shows rate-limit alert when review limit is exceeded', () => {
+  it('shows rate-limit error when review limit is exceeded', async () => {
     (checkRateLimit as jest.Mock).mockReturnValueOnce({
       allowed: false,
       remaining: 0,
       resetInMs: 3_600_000,
     });
-    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
     render(<ReviewForm restaurantId="r1" restaurantName="Test" />);
+
+    // Wait for the auth useEffect to resolve so userId is populated
+    await act(async () => {});
+
     fireEvent.click(screen.getAllByRole('button')[0]); // select star
     fireEvent.click(screen.getByRole('button', { name: /post review/i }));
 
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('too many reviews'));
-    alertSpy.mockRestore();
+    // Component sets formError state (not window.alert) when rate-limited
+    expect(screen.getByText(/too many reviews/i)).toBeInTheDocument();
   });
 
   it('shows success state after a successful submission', async () => {
     render(<ReviewForm restaurantId="r1" restaurantName="Test" />);
+
+    // Wait for the auth useEffect to resolve so userId is populated
+    await act(async () => {});
+
     fireEvent.click(screen.getAllByRole('button')[0]); // select star
     fireEvent.click(screen.getByRole('button', { name: /post review/i }));
 
@@ -84,6 +91,10 @@ describe('ReviewForm', () => {
   it('calls onSuccess callback after a successful submission', async () => {
     const onSuccess = jest.fn();
     render(<ReviewForm restaurantId="r1" restaurantName="Test" onSuccess={onSuccess} />);
+
+    // Wait for the auth useEffect to resolve so userId is populated
+    await act(async () => {});
+
     fireEvent.click(screen.getAllByRole('button')[0]);
     fireEvent.click(screen.getByRole('button', { name: /post review/i }));
 
