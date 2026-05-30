@@ -26,7 +26,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # npm ci fails when the lockfile is missing Linux-specific optional
+        # packages (e.g. @emnapi/runtime needed by @next/swc on Linux).
+        # The lockfile is generated on macOS so those entries are absent.
+        # npm install resolves platform-specific deps on the fly.
+        run: npm install
 
       - name: Type check
         run: npx tsc --noEmit
