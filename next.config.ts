@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
               "img-src 'self' blob: data: https://images.unsplash.com https://*.supabase.co https://*.supabase.in",
               // Allow API calls to Supabase (REST + realtime WebSocket)
               "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in",
+              // Allow external audio files (spinner + game sound effects)
+              "media-src 'self' https://assets.mixkit.co",
               "font-src 'self' data:",
               "frame-src 'none'",
               "frame-ancestors 'none'",
