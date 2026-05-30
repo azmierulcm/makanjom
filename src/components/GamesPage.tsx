@@ -6,8 +6,9 @@ import Link from 'next/link';
 import {
   Gamepad2, Zap, Brain, Grid3x3, ChevronRight, ArrowLeft,
   Trophy, Shuffle, LogIn, Tag, AlignJustify, Flame, Ham,
-  MapPin, Soup, Eye, BarChart3,
+  MapPin, Eye, BarChart3, Volume2, VolumeX,
 } from 'lucide-react';
+import { gameBgm, type BgmTheme } from '@/lib/gameBgm';
 import FoodTriviaGame    from '@/components/games/FoodTriviaGame';
 import MemoryMatchGame   from '@/components/games/MemoryMatchGame';
 import PriceGuesserGame  from '@/components/games/PriceGuesserGame';
@@ -214,6 +215,36 @@ export default function GamesPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeGame, setActiveGame] = useState<GameId | null>(null);
   const [lastPointsEarned, setLastPointsEarned] = useState<number | null>(null);
+  const [muted, setMuted]       = useState(() => gameBgm?.getMuted() ?? false);
+
+  // Theme per game
+  const GAME_THEMES: Record<GameId, BgmTheme> = {
+    trivia:    'arcade',
+    memory:    'arcade',
+    price:     'market',
+    scramble:  'arcade',
+    rapidfire: 'rapid',
+    emoji:     'market',
+    spicy:     'market',
+    pairs:     'market',
+    mystery:   'mystery',
+  };
+
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    gameBgm?.setMuted(next);
+  };
+
+  // Start BGM when a game begins; stop on post-game or back
+  useEffect(() => {
+    if (activeGame && lastPointsEarned === null) {
+      gameBgm?.start(GAME_THEMES[activeGame]);
+    } else {
+      gameBgm?.stop();
+    }
+    return () => { gameBgm?.stop(); };
+  }, [activeGame, lastPointsEarned]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -259,17 +290,28 @@ export default function GamesPage() {
           <h1 className="text-3xl font-black tracking-[-0.04em] text-neutral-950 sm:text-4xl">
             {activeGame && activeGameMeta ? activeGameMeta.title : 'Play & earn points'}
           </h1>
-          {isLoggedIn ? (
-            <div className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-sm font-black text-white shrink-0">
-              <Zap className="h-4 w-4 fill-[#ff385c] text-[#ff385c]" /> {points} pts
-            </div>
-          ) : (
-            <Link href="/login"
-              className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-600 shadow-sm hover:border-[#ff385c] hover:text-[#ff385c] transition-colors shrink-0"
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mute toggle — always visible */}
+            <button
+              onClick={toggleMute}
+              aria-label={muted ? 'Unmute music' : 'Mute music'}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 shadow-sm transition hover:border-neutral-400 hover:text-neutral-800 active:scale-95"
             >
-              <LogIn className="h-3.5 w-3.5" /> Sign in to earn pts
-            </Link>
-          )}
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2 text-sm font-black text-white">
+                <Zap className="h-4 w-4 fill-[#ff385c] text-[#ff385c]" /> {points} pts
+              </div>
+            ) : (
+              <Link href="/login"
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-600 shadow-sm hover:border-[#ff385c] hover:text-[#ff385c] transition-colors"
+              >
+                <LogIn className="h-3.5 w-3.5" /> Sign in to earn pts
+              </Link>
+            )}
+          </div>
         </div>
         {!activeGame && (
           <p className="mt-2 text-neutral-600">Beat decision fatigue with fun food games. Earn points to climb the leaderboard.</p>
