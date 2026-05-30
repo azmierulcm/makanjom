@@ -728,7 +728,7 @@ function BookingCard({
 
 // ─── ListingManager ───────────────────────────────────────────────────────────
 
-const PRICE_RANGES = ['RM', 'RM RM', 'RM RM RM', 'RM RM RM RM'];
+const PRICE_RANGES = ['< RM 10', 'RM 10–20', 'RM 20–50', 'RM 50+'];
 const VIBE_OPTIONS = ['Cozy', 'Casual', 'Fine Dining', 'Cafe', 'Street Food', 'Family', 'Romantic', 'Trendy'];
 
 function ListingManager({

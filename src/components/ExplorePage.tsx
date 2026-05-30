@@ -8,7 +8,7 @@ import RestaurantCard from '@/components/RestaurantCard';
 import type { Restaurant } from '@/lib/types';
 
 const CUISINE_FILTERS = ['All', 'Malay', 'Indian', 'Cafe', 'Japanese', 'Dessert', 'Mamak', 'Penang'];
-const PRICE_FILTERS = ['Any', 'RM', 'RM RM', 'RM RM RM', 'RM RM RM RM'];
+const PRICE_FILTERS = ['Any', '< RM 10', 'RM 10–20', 'RM 20–50', 'RM 50+'];
 
 type SortKey = 'rating' | 'newest' | 'az';
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [

@@ -19,7 +19,7 @@ interface SpinnerRestaurant extends Restaurant {
 }
 
 const VIBES = ["Any vibe", "Comfort food", "Something new", "Family outing", "Quick bite", "Cozy dinner", "Treat yourself"];
-const PRICES = ["Any price", "RM", "RM RM", "RM RM RM", "RM RM RM RM"];
+const PRICES = ["Any price", "< RM 10", "RM 10–20", "RM 20–50", "RM 50+"];
 const accents = [
   "from-rose-50 to-orange-50",
   "from-emerald-50 to-lime-50",

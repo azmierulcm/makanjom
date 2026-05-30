@@ -1143,10 +1143,10 @@ export default function AdminCMS() {
                       onChange={(e) => setRestForm((f) => f && ({ ...f, price_range: e.target.value }))}
                       className="admin-input"
                     >
-                      <option value="RM">RM (Budget)</option>
-                      <option value="RM RM">RM RM (Moderate)</option>
-                      <option value="RM RM RM">RM RM RM (Pricey)</option>
-                      <option value="RM RM RM RM">RM RM RM RM (Fine Dining)</option>
+                      <option value="< RM 10">&lt; RM 10 (Budget)</option>
+                      <option value="RM 10–20">RM 10–20 (Moderate)</option>
+                      <option value="RM 20–50">RM 20–50 (Pricey)</option>
+                      <option value="RM 50+">RM 50+ (Fine Dining)</option>
                     </select>
                   </FieldGroup>
                   <FieldGroup label="Vibe">
