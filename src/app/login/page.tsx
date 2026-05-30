@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import { Sparkles, ArrowRight, ChefHat, User, ShieldCheck, Mail, Lock, Loader2, Store } from 'lucide-react';
+import { Sparkles, ArrowRight, ChefHat, User, ShieldCheck, Mail, Lock, Loader2, Store, Eye, EyeOff, X } from 'lucide-react';
 import Link from 'next/link';
 
 function LoginForm() {
@@ -16,6 +16,7 @@ function LoginForm() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const redirectParam = searchParams.get('redirect');
 
@@ -117,8 +118,17 @@ function LoginForm() {
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md bg-white p-8 md:p-12 rounded-[3rem] border border-neutral-200 shadow-2xl"
+                className="w-full max-w-md bg-white p-8 md:p-12 rounded-[3rem] border border-neutral-200 shadow-2xl relative"
             >
+                <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="absolute top-6 right-6 w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 transition-all"
+                    aria-label="Close"
+                >
+                    <X size={18} />
+                </button>
+
                 <div className="flex flex-col items-center text-center mb-10">
                     <div className="flex gap-2 p-1 bg-neutral-100 rounded-full mb-8">
                         <button 
@@ -190,13 +200,21 @@ function LoginForm() {
                             <Lock size={18} />
                         </div>
                         <input
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full pl-14 pr-6 py-4 bg-neutral-50 border border-neutral-100 rounded-[1.5rem] text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
+                            className="w-full pl-14 pr-14 py-4 bg-neutral-50 border border-neutral-100 rounded-[1.5rem] text-sm font-bold outline-none focus:border-[#ff385c]/30 focus:bg-white transition-all"
                             placeholder="Password"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-[#ff385c] transition-colors"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                     </div>
 
                     {mode === 'signin' && (
